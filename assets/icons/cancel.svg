@@ -1,0 +1,16 @@
+<svg id="cancel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-2 {
+        fill: #797979;
+      }
+    </style>
+  </defs>
+  <title>cancel</title>
+  <rect class="cls-1" width="50" height="50"/>
+  <polygon class="cls-2" points="41.26 35.61 30.66 25 41.26 14.39 35.61 8.74 25 19.34 14.39 8.74 8.74 14.39 19.34 25 8.74 35.61 14.39 41.26 25 30.66 35.61 41.26 41.26 35.61"/>
+</svg>

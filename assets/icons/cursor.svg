@@ -1,0 +1,16 @@
+<svg id="cursor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #797979;
+      }
+
+      .cls-2 {
+        fill: none;
+      }
+    </style>
+  </defs>
+  <title>cursor</title>
+  <path class="cls-1" d="M12.32,47.12,24.21,35.23a.74.74,0,0,1,.54-.23H41.56a.77.77,0,0,0,.54-1.32L12.31,4.11A.77.77,0,0,0,11,4.66V46.57A.78.78,0,0,0,12.32,47.12Z"/>
+  <rect class="cls-2" width="50" height="50"/>
+</svg>

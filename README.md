@@ -1,6 +1,6 @@
 # protoColors
 
-## Rebuilt of [colorHistory](https://github.com/Inventsable/CEP-Color-History)
+## Rebuild of [colorHistory](https://github.com/Inventsable/CEP-Color-History)
 
 ``` bash
 # .../AppData/Roaming/Adobe/CEP/extensions

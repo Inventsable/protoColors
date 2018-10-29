@@ -102,6 +102,26 @@ function scanSelectedColors(arrs) {
   return JSON.stringify(result);
 }
 
+function scanAllColors() {
+  var result = [], doc = app.documents[0];
+  if (doc.pageItems.length) {
+    for (var i = 0; i < doc.pageItems.length; i++) {
+      var child = doc.pageItems[i];
+      if (child.selected) {
+        var clone = {fill: 'none', stroke: 'none', index: i}
+        if (child.filled) {
+          clone.fill = rgbAI(child.fillColor);
+        }
+        if (child.stroked) {
+          clone.stroke = rgbAI(child.strokeColor);
+        }
+      }
+      result.push(clone);
+    }
+  }
+  return JSON.stringify(result);
+}
+
 function scanFillStroke() {
   var doc = app.documents[0];
   var child = {

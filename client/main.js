@@ -28,7 +28,7 @@ Vue.component('head-main', {
   template: `
     <div class="headerMain bbox">
       <sort-by></sort-by>
-      <selection-colors></selection-colors>
+      <scanner></scanner>
       <visualizers></visualizers>
     </div>
   `,
@@ -384,11 +384,9 @@ Vue.component('fill-stroke', {
 Vue.component('visualizers', {
   template: `
     <div class="headerVisualizers bbox">
-      <div class="visualizersL">
-        <fill-stroke/>
-        <scanner></scanner>
-      </div>
       <mod-keys></mod-keys>
+      <fill-stroke/>
+      <selection-colors></selection-colors>
     </div>
   `,
   data() {
@@ -400,7 +398,7 @@ Vue.component('visualizers', {
 
 Vue.component('mod-keys', {
   template: `
-    <div v-mousemove-outside="onMouseOutside" class="visualizerModKeys" :style="'grid-template-rows: repeat(' + this.activeList.length + ', 1fr);'">
+    <div v-mousemove-outside="onMouseOutside" class="visualizerModKeys" :style="'grid-template-columns: repeat(' + this.activeList.length + ', 1fr);'">
       <div v-for="modKey in activeList" :class="getModKeyClass(modKey)"></div>
     </div>
   `,
@@ -485,7 +483,7 @@ Vue.component('body-main', {
             key: 0,
             value: '#ff0000',
             showPrefix: false,
-            isActive: false,
+            isActive: true,
             isHover: false,
             isFind: false,
             isReplace: false,
@@ -569,6 +567,12 @@ Vue.component('swatch-list', {
     </div>
   `,
   methods: {
+    hasHandle(swatch, result=false) {
+      for (let [key,value] of Object.entries(swatch))
+        if (swatch[key])
+          result = true;
+      return result;
+    },
     currentAction(swatch) {
       if (this.$root.isDefault) {
         if (this.$root.isFillActive) {
@@ -610,7 +614,7 @@ Vue.component('swatch-list', {
     },
     suffixStyle(swatch) {
       var str = ''
-      if ((!this.$root.isDefault) && (swatch.isHover)) {
+      if ((!this.isDefault) && (swatch.isHover)) {
         str = 'width: 60%;';
       } else {
         str = 'width: 100%';
@@ -618,10 +622,38 @@ Vue.component('swatch-list', {
       return str;
     },
     getSwatchClass(swatch) {
-      return 'swatch'
+      var str = 'swatch-'
+      if (swatch.isActive)
+        str += 'active'
+      else
+        str += 'idle'
+      return str;
     },
     getSwatchStyle(swatch) {
-      return 'background-color: ' + swatch.value + ';'
+      var bg = 'background-color:' + swatch.value
+      var wCond = '', cCond = '';
+      // if ((swatch.isActive) && (this.hasHandle(swatch)) && (this.isDefault)) {
+      //   wCond = '1.35px 1.35px 1.35px 0px'
+      //   cCond = this.$root.getCSS('color-ui-selected');
+      // } else if ((swatch.isActive) && (this.isDefault)) {
+      //   wCond = '1.35px'
+      //   cCond = this.$root.getCSS('color-ui-selected');
+      // } else if ((!this.isDefault) && (swatch.isHover)) {
+      //   wCond = '1.35px 1.35px 1.35px 0px'
+      //   // cCond = this.$root.getCSS('color-ui-hover');
+      //   cCond = 'transparent'
+      // } else {
+      //   wCond = '1.35px'
+      //   cCond = 'transparent'
+      // }
+      if (swatch.isActive)
+        wCond = '1.35px', cCond = this.$root.getCSS('color-ui-selected');
+      var border = `border-width:${wCond}`;
+      var bcolor = `border-color:${cCond}`;
+
+      var style = `${bg};${border};${bcolor};border-style: solid;`;
+      console.log(style);
+      return style;
     },
     showPrefix(swatch) {
       Event.$emit('swatchClearHoverEvt', swatch.key);
@@ -790,6 +822,7 @@ var app = new Vue({
     this.handleResize(null);
     window.addEventListener('resize', this.handleResize);
     this.setCSSHeight();
+    this.getAllAIColors();
     Event.$on('modsUpdate', self.parseModifiers);
     Event.$on('checkSelectedColors', self.getSelectedAIColors);
   },
@@ -806,6 +839,17 @@ var app = new Vue({
       console.log('Requesting');
       csInterface.evalScript(`scanSelectedColors('${msg}')`, self.updateSelectedAIColors)
       // return ['#ff0000', '#00ffff', '#ff00ff'];
+    },
+    getAllAIColors() {
+      var self = this;
+      console.log('Requesting');
+      csInterface.evalScript(`scanAllColors()`, self.readAllAIColors)
+    },
+    readAllAIColors(msg) {
+      console.log('Receiving');
+      if (/\,/.test(msg))
+        msg = JSON.parse(msg);
+      console.log(msg);
     },
     wake() {
       this.isWake = true;

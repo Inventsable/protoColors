@@ -1,4 +1,5 @@
 var exist = app.documents.length > 0;
+var lastresult;
 // var hasPaths = doc.pathItems.length > 0;
 // var hasItems = doc.pageItems.length > 0;
 function scanSelection() {
@@ -9,7 +10,17 @@ function scanSelection() {
         if (child.selected)
             result.push(i);
     }
+    if ((result.length == 1) && (result[0] !== lastresult)) {
+        autoAdjustFS(result[0]);
+        lastresult = result[0];
+    }
     return result;
+}
+function autoAdjustFS(index) {
+    var doc = app.documents[0];
+    var item = doc.pageItems[index];
+    if ((item.filled) && (!item.stroked))
+        app.isFillActive(true);
 }
 function scanFillActive() {
     return app.isFillActive();
@@ -72,11 +83,31 @@ function validateArray(arrs) {
     }
     // return valid;
 }
+function selectSameFill(color) {
+    clearSelection();
+    var result = [], doc = app.documents[0];
+    for (var i = 0; i < doc.pageItems.length; i++) {
+        var child = doc.pageItems[i];
+        if ((child.filled) && (color == rgbAI(child.fillColor)))
+            child.selected = true;
+    }
+}
+function selectSameStroke(color) {
+    clearSelection();
+    var result = [], doc = app.documents[0];
+    for (var i = 0; i < doc.pageItems.length; i++) {
+        var child = doc.pageItems[i];
+        if ((child.stroked) && (color == rgbAI(child.strokeColor)))
+            child.selected = true;
+    }
+}
+function clearSelection() {
+    app.selection = '';
+}
 function scanSelectedColors(arrs) {
     var result = [];
     arrs = validateArray(arrs);
     if (arrs.length) {
-        // alert('valid')
         for (var i = 0; i < arrs.length; i++) {
             var target = Number(arrs[i]);
             var child = app.documents[0].pageItems[target];
@@ -96,20 +127,14 @@ function scanSelectedColors(arrs) {
 }
 function scanAllColors() {
     var result = [], doc = app.documents[0];
-    if (doc.pageItems.length) {
-        for (var i = 0; i < doc.pageItems.length; i++) {
-            var child = doc.pageItems[i];
-            if (child.selected) {
-                var clone = { fill: 'none', stroke: 'none', index: i };
-                if (child.filled) {
-                    clone.fill = rgbAI(child.fillColor);
-                }
-                if (child.stroked) {
-                    clone.stroke = rgbAI(child.strokeColor);
-                }
-            }
-            result.push(clone);
-        }
+    for (var i = 0; i < doc.pageItems.length; i++) {
+        var child = doc.pageItems[i];
+        var clone = { fill: 'none', stroke: 'none', index: i };
+        if (child.filled)
+            clone.fill = rgbAI(child.fillColor);
+        if (child.stroked)
+            clone.stroke = rgbAI(child.strokeColor);
+        result.push(clone);
     }
     return JSON.stringify(result);
 }

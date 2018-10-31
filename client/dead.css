@@ -1,0 +1,110 @@
+.headerSortBy {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-column-gap: .25rem;
+}
+
+[class^="sortBy"] {
+  box-sizing: border-box;
+  /* height: 2rem; */
+  /* border: 1.35px solid var(--color-ui-border); */
+  cursor: pointer;
+}
+/* [class^="sortBy"]:hover {
+  background-color: var(--color-ui-hover);
+} */
+
+.sortBy-Recent-Idle, .sortBy-Spectrum-Idle {
+  background-color: var(--color-ui-idle);
+}
+
+.sortBy-Recent-Active, .sortBy-Spectrum-Active {
+  background-color: var(--color-ui-active);
+}
+
+/* [class^="header"] {
+  margin-bottom: .25rem;
+} */
+
+
+/* .visualizerScanning {
+  display: grid;
+  grid-template-columns: 1fr;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.visualizerScanning-Idle {
+  background-color: var(--color-ui-idle);
+}
+.visualizerScanning-Active {
+  background-color: var(--color-ui-active);
+} */
+/* .visualizersL {
+  display: grid;
+  grid-template-columns: 4fr 1fr;
+  grid-row-gap: .25rem;
+} */
+
+
+.bodyHandle {
+  box-sizing: border-box;
+  height: 1rem;
+  width: 100%;
+  border: 2px solid var(--color-ui-border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: ns-resize;
+}
+.bodyHandle:hover {
+  background-color: var(--color-ui-hover);
+}
+
+.bodyHandleDiv {
+  border: 1.35px solid var(--color-ui-border);
+  height: 0px;
+  width: 80%;
+}
+
+/* .swatchPrefix-Add {
+  background-color: var(--color-G);
+}
+.swatchPrefix-Select {
+  background-color: var(--color-B);
+}
+.swatchPrefix-Minus {
+  background-color: var(--color-R);
+}
+.swatchPrefix-Multi {
+  background-color: var(--color-ui-active);
+} */
+
+.font-icon {border: 1px solid red;}
+
+.footerMain {
+  display: flex;
+  /* grid-template-rows: 1fr 1fr; */
+  flex-direction: column;
+  /* flex-wrap: wrap; */
+  justify-content: flex-end;
+  /* align-items: flex-end; */
+  /* border: 1px solid red; */
+}
+.footerInfo {
+  width: 100%;
+  height: 1rem;
+  border: 1px solid green;
+  /* height: 1rem; */
+}
+
+.testToolbar {
+  width: 100%;
+  display: grid;
+  border: 1px solid green;
+  grid-template-columns: 1fr 1fr;
+}
+
+.testToolbarBtn {
+  border: 1px solid blue;
+  height: .5rem;
+}

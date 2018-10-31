@@ -10,9 +10,9 @@ Vue.component('proto-colors', {
         <head-main></head-main>
         <body-main></body-main>
       </div>
-      <footer-main></footer-main>
     </div>
   `,
+  // <footer-main></footer-main>
   methods: {
     wakeApp(evt) {
       this.$root.wake();
@@ -27,46 +27,11 @@ Vue.component('proto-colors', {
 Vue.component('head-main', {
   // sort-by and scanner are hidden
   template: `
-    <div class="headerMain bbox">
-      <sort-by></sort-by>
+    <div class="headerMain">
       <scanner></scanner>
       <visualizers></visualizers>
     </div>
   `,
-})
-
-Vue.component('sort-by', {
-  template: `
-    <div class="headerSortBy">
-      <div :class="sortByClass('Recent')" @click="toggleDef(true)"></div>
-      <div :class="sortByClass('Spectrum')" @click="toggleDef(false)"></div>
-    </div>
-  `,
-  data() {
-    return {
-      isDefault: true,
-    }
-  },
-  computed: {
-    isRecent: function(){return (this.isDefault) ? true : false},
-    isSpectrum: function(){return !this.isRecent},
-  },
-  methods: {
-    toggleDef(state) {
-      if (state !== this.isDefault)
-        this.isDefault = !this.isDefault;
-    },
-    sortByClass(name) {
-      var style = 'sortBy-' + name + '-';
-      if (((this.isDefault) && (name == 'Recent'))
-      || ((!this.isDefault) && (name == 'Spectrum'))) {
-        style += 'Active'
-      } else {
-        style += 'Idle'
-      }
-      return style;
-    },
-  }
 })
 
 Vue.component('selection-colors', {
@@ -440,11 +405,6 @@ Vue.component('visualizers', {
       <selection-colors></selection-colors>
     </div>
   `,
-  data() {
-    return {
-      msg: 'hello',
-    }
-  }
 })
 
 Vue.component('mod-keys', {
@@ -516,26 +476,33 @@ Vue.component('mod-keys', {
 })
 
 Vue.component('body-main', {
+  //  @mouseover="restrictHandle" @mouseup="endDrag"
   template: `
-    <div @mouseover="restrictHandle" @mouseup="endDrag" class="bodyMain">
+    <div class="bodyMain">
       <div id="bodySwatchList" class="bodySwatches" @mouseout="swatchRangeOut">
-        <swatch-list :model="swatchList.byTime"></swatch-list>
+        <swatch-list v-if="!sortByTime" :model="swatchList.bySpectrum"></swatch-list>
+        <swatch-list v-if="sortByTime" :model="swatchList.byTime"></swatch-list>
+        <div v-if="!swatchList.byTime.length" class="resetSwatchList" @click="resetColors">
+          <span class="resetText">Reset</span>
+        </div>
       </div>
-      <handle :enabled="canHandle"></handle>
     </div>
   `,
+  // <handle :enabled="canHandle"></handle>
   data() {
     return {
+      reverse: false,
       canHandle: false,
+      sortByTime: true,
       sorted: 'byTime',
       total: 0,
       swatchList: {
-        raw: [],
-        cloned: [],
-        byTime: [
+        // raw: [],
+        // cloned: [],
+        bySpectrum: [
           {
             key: 0,
-            value: '#eb6d5a',
+            value: '#ffffff',
             showPrefix: false,
             isActive: true,
             isHover: false,
@@ -544,22 +511,33 @@ Vue.component('body-main', {
           },
           {
             key: 1,
-            value: '#66ff3b',
+            value: '#000000',
             showPrefix: false,
             isActive: false,
             isHover: false,
             isFind: false,
             isReplace: false,
           },
+        ],
+        byTime: [
           {
-            key: 2,
-            value: '#3593eb',
+            key: 0,
+            value: '#ffffff',
+            showPrefix: false,
+            isActive: true,
+            isHover: false,
+            isFind: false,
+            isReplace: false,
+          },
+          {
+            key: 1,
+            value: '#000000',
             showPrefix: false,
             isActive: false,
             isHover: false,
             isFind: false,
             isReplace: false,
-          }
+          },
         ],
       }
     }
@@ -570,8 +548,34 @@ Vue.component('body-main', {
     Event.$on('swatchClearHoverEvt', self.clearSwatchesHover);
     Event.$on('addNewSwatch', self.addNewSwatch);
     Event.$on('clearSwatchesActive', self.clearSwatchesActive)
+    Event.$on('toggleSortBySpectrum', self.toggleSortBySpectrum);
+    Event.$on('setSortBySpectrum', self.setSortBySpectrum);
+    Event.$on('setSortByTime', self.setSortByTime);
+    Event.$on('reverseCurrentSwatches', self.toggleReverse);
+    Event.$on('deleteSwatch', self.deleteSwatch);
   },
   methods: {
+    resetColors() {
+      Event.$emit('scanAllAIColors');
+    },
+    toggleReverse() {
+      this.reverse = !this.reverse;
+      this.swatchList.byTime = this.swatchList.byTime.reverse();
+      this.swatchList.bySpectrum = this.swatchList.bySpectrum.reverse();
+    },
+    setSortByTime(state) {
+      if (state) {
+        this.sortByTime = true;
+      }
+    },
+    setSortBySpectrum(state) {
+      if (state) {
+        this.sortByTime = false;
+      }
+    },
+    toggleSortBySpectrum() {
+      this.sortByTime = !this.sortByTime;
+    },
     readAllSwatches(msg) {
       var uniques = this.getUniqueColors(msg);
       console.log(uniques);
@@ -599,9 +603,80 @@ Vue.component('body-main', {
         isFind: false,
         isReplace: false,
       }
-      this.swatchList.byTime.unshift(clone);
+      if (!this.reverse)
+        this.swatchList.byTime.unshift(clone);
+      else
+        this.swatchList.byTime.push(clone);
+
+      this.resetSwatchKeys();
+      var spectrum = this.sortInSpectrum(true);
+      this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
+    },
+    deleteSwatch(index) {
+      var self = this;
+      if (!this.reverse)
+        this.$root.masterColors.splice(index,1);
+      else
+        this.$root.masterColors.reverse().splice(index,1);
+      this.constructSwatches(this.$root.masterColors);
+    },
+    resetSwatchKeys() {
+      for (var i = 0; i < this.swatchList.byTime.length; i++) {
+        var swatch = this.swatchList.byTime[i];
+      }
     },
     constructSwatches(array) {
+      var clone, mirror = [];
+      if (array.length > 0) {
+        for (var i = 0; i < array.length; i++) {
+          clone = {
+            key: i,
+            value: array[i],
+            showPrefix: false,
+            isActive: false,
+            isHover: false,
+            isFind: false,
+            isReplace: false,
+          }
+          mirror.push(clone);
+        }
+      } else {
+        var white = {
+          key: 0,
+          value: '#ffffff',
+          showPrefix: false,
+          isActive: false,
+          isHover: false,
+          isFind: false,
+          isReplace: false,
+        }
+        var black = {
+          key: 1,
+          value: '#000000',
+          showPrefix: false,
+          isActive: false,
+          isHover: false,
+          isFind: false,
+          isReplace: false,
+        }
+        // mirror = [white, black];
+        // array = ['#ffffff', '#000000']
+      }
+      if (!this.reverse) {
+        this.swatchList.byTime = mirror;
+        this.$root.masterColors = array;
+        var spectrum = this.sortInSpectrum(true);
+        this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
+      }
+      else {
+        this.swatchList.byTime = mirror.reverse();
+        this.$root.masterColors = array.reverse();
+        var spectrum = this.sortInSpectrum(true);
+        this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum.reverse());
+      }
+      this.total = mirror.length;
+    },
+    constructSpectrumSwatches(array) {
       var clone, mirror = [];
       for (var i = 0; i < array.length; i++) {
         clone = {
@@ -615,9 +690,7 @@ Vue.component('body-main', {
         }
         mirror.push(clone);
       }
-      this.swatchList.byTime = mirror;
-      this.total = mirror.length;
-      this.$root.masterColors = array;
+      return mirror;
     },
     setSwatchLength() {
       this.$root.setCSS('swatchLength', this.swatchList.byTime.length);
@@ -643,19 +716,44 @@ Vue.component('body-main', {
         target[i].isHover = false;
       }
     },
-    endDrag() {
-      Event.$emit('endDragEvt')
-    },
-    restrictHandle(evt) {
-      if ((evt.clientY > 96) && (evt.clientY < 340))
-        this.canDrag = true;
-      else
-        this.canDrag = false;
-      if (!this.canDrag) {
-        this.endDrag();
-        // console.log('Exiting');
+    sortInSpectrum(forward=true) {
+      var self = this;
+      // console.log("Sorting: " + colorHistory);
+      var n = [];
+      for (var index = 0; index < this.$root.masterColors.length; index++){
+        var c = [];
+        c.push(hexToRgb(this.$root.masterColors[index]).r);
+        c.push(hexToRgb(this.$root.masterColors[index]).g);
+        c.push(hexToRgb(this.$root.masterColors[index]).b);
+        n.push(rgbToHsl(c));
       }
-    },
+      n.sort(function(a, b){
+        return a[0] - b[0];
+      });
+      var sorted = [];
+      for (var index = 0; index < n.length; index++) {
+        if (forward) {
+          sorted.push(hslToHex(n[index][0], n[index][1], n[index][2]));
+        } else {
+          sorted.unshift(hslToHex(n[index][0], n[index][1], n[index][2]));
+        }
+      }
+      console.log("Sorted: " + sorted);
+      return sorted;
+    }
+    // endDrag() {
+    //   Event.$emit('endDragEvt')
+    // },
+    // restrictHandle(evt) {
+    //   if ((evt.clientY > 96) && (evt.clientY < 340))
+    //     this.canDrag = true;
+    //   else
+    //     this.canDrag = false;
+    //   if (!this.canDrag) {
+    //     this.endDrag();
+    //     // console.log('Exiting');
+    //   }
+    // },
   }
 })
 
@@ -695,6 +793,7 @@ Vue.component('swatch-list', {
       return result;
     },
     currentAction(swatch) {
+      // This is too broad, needs specific modkey combinations instead of standalone inclusion
       if (this.$root.isDefault) {
         if (this.$root.isFillActive) {
           csInterface.evalScript(`setDefaultFill('${swatch.value}')`)
@@ -703,9 +802,20 @@ Vue.component('swatch-list', {
         }
         if (this.$root.hasSelection)
           console.log('Send to Illustrator');
-      } else if (this.$root.mods.Shift) {
+      } else if (this.$root.mods.Shift) {     // This would trigger on Shift and Shift + Ctrl
         // swatch.isActive = !swatch.isActive;
         console.log('Add to selection');
+        if (this.$root.isFillActive) {
+          if (swatch.isActive)
+            csInterface.evalScript(`addSameFill('${swatch.value}')`)
+          else
+            csInterface.evalScript(`clearSelection()`);
+        } else {
+          if (swatch.isActive)
+            csInterface.evalScript(`addSameStroke('${swatch.value}')`)
+          else
+            csInterface.evalScript(`clearSelection()`);
+        }
       } else if (this.$root.mods.Ctrl) {
         Event.$emit('clearSwatchesActive', swatch.key);
         swatch.isActive = !swatch.isActive;
@@ -723,22 +833,14 @@ Vue.component('swatch-list', {
             csInterface.evalScript(`clearSelection()`);
         }
         console.log('Select all ');
+      } else if (this.$root.mods.Alt) {
+        console.log(`Delete swatch #${swatch.key}`);
+        Event.$emit('deleteSwatch', swatch.key)
       }
     },
     prefixClass(swatch) {
       var str = 'swatchPrefix-'
       str += 'Def'
-      // if (this.$root.isDefault) {
-      //   str += 'Def'
-      // } else if ((this.$root.mods.Ctrl) && (!this.$root.mods.Shift) && (!this.$root.mods.Alt)) {
-      //   str += 'Select'
-      // } else if ((this.$root.mods.Shift) && (!this.$root.mods.Ctrl) && (!this.$root.mods.Alt)) {
-      //   str += 'Add'
-      // } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (!this.$root.mods.Ctrl)) {
-      //   str += 'Minus'
-      // } else {
-      //   str += 'Multi'
-      // }
       return str;
     },
     prefixStyle(swatch) {
@@ -785,32 +887,10 @@ Vue.component('swatch-list', {
       return str;
     },
     getSwatchStyle(swatch) {
-      var bg = 'background-color:' + swatch.value
-      var wCond = '', cCond = '';
-      // if ((swatch.isActive) && (this.hasHandle(swatch)) && (this.isDefault)) {
-      //   wCond = '1.35px 1.35px 1.35px 0px'
-      //   cCond = this.$root.getCSS('color-ui-selected');
-      // } else if ((swatch.isActive) && (this.isDefault)) {
-      //   wCond = '1.35px'
-      //   cCond = this.$root.getCSS('color-ui-selected');
-      // } else if ((!this.isDefault) && (swatch.isHover)) {
-      //   wCond = '1.35px 1.35px 1.35px 0px'
-      //   // cCond = this.$root.getCSS('color-ui-hover');
-      //   cCond = 'transparent'
-      // } else {
-      //   wCond = '1.35px'
-      //   cCond = 'transparent'
-      // }
-      // if (swatch.isActive)
-      //   wCond = '1.35px', cCond = this.$root.getCSS('color-ui-selected');
+      // if (swatch.value !== '#323232')
+        return 'background-color:' + swatch.value;
       // else
-      //   wCond = '0px', cCond = 'transparent';
-      // var border = `border-width:${wCond}`;
-      // var bcolor = `border-color:${cCond}`;
-      //
-      // var style = `${bg};${border};${bcolor};border-style: solid;`;
-      // console.log(style);
-      return bg;
+        // return 'background-color:' + swatch.value + ';border: 1.35px solid ' + this.$root.getCSS('color-ui-idle');
     },
     showPrefix(swatch) {
       Event.$emit('swatchClearHoverEvt', swatch.key);
@@ -850,7 +930,9 @@ Vue.component('swatch-icon', {
       } else if ((this.$root.mods.Shift) && (!this.$root.mods.Ctrl) && (!this.$root.mods.Alt)) {
         str += 'plus'
       } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (!this.$root.mods.Ctrl)) {
-        str += 'find'
+        str += 'cancel'
+      } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (this.$root.mods.Ctrl)) {
+        str += 'cancel'
       } else {
         str += 'Multi'
       }
@@ -869,154 +951,51 @@ Vue.component('swatch-tag', {
 })
 
 
-// DEPRECATED
-Vue.component('handle', {
-  props: ['enabled'],
-  template: `
-    <div
-      v-mousemove-outside="onMouseOutside"
-      @mousedown="startDrag"
-      @mouseup="endDrag"
-      class="bodyHandle"
-      v-if="enabled">
-      <div class="bodyHandleDiv"></div>
-    </div>
-  `,
-  data() {
-    return {
-      canHandle: false,
-      canDrag: false,
-      isDragging: false,
-      startY: 0,
-      startH: 0,
-      endH: 0,
-    }
-  },
-  methods: {
-    onMouseOutside(evt, el) {
-      if ((this.canDrag) && (this.isDragging) && (this.canHandle)) {
-        // Needs subtraction logic
-        var res = (this.startY - evt.clientY) * -1;
-        console.log(res)
-        var body = el.parentNode.children[0];
-        var style = this.$root.getCSS('swatchList-height');
-        var newDim = this.startH + res;
-        if  (((res > 0) && (newDim < 240)) || ((res < 0) && (newDim > this.startY))) {
-          console.log(`${this.startY} - ${evt.clientY} = ${body.clientHeight} + ${res} = ${newDim}, css: ${style}`);
-          this.$root.setCSS('swatchList-height', newDim + 'px')
-          this.endH = newDim;
-        }
-      }
-    },
-    startDrag(evt) {
-      if (!this.isDragging)
-        this.isDragging = true;
-      if (this.isDragging)
-        this.startY = evt.clientY;
-      console.log(`Starting at ${this.startY}`);
-    },
-    endDrag(evt, opt) {
-      // console.log('Ending drag');
-      this.isDragging = false;
-      // console.log(`${this.startH} : ${this.endH}`);
-      this.startH = this.endH;
-    },
-    getHeight() {
-      var swatchList = document.getElementById('bodySwatchList');
-      this.startH = swatchList.clientHeight;
-    },
-  },
-  mounted() {
-    var self = this;
-    Event.$on('endDragEvt', self.endDrag)
-    console.log(this.canHandle);
-    var swatchList = document.getElementById('bodySwatchList');
-    if (this.canHandle) {
-      this.$root.setCSS('swatchList-height', swatchList.clientHeight + 4 + 'px')
-      this.getHeight();
-    }
-  }
-})
-
-Vue.component('footer-main', {
-  template: `
-    <div class="footerMain bbox">
-      <div class="footerInfo bbox"></div>
-      <div class="testToolbar bbox">
-        <div class="testToolbarBtn bbox"></div>
-        <div class="testToolbarBtn bbox"></div>
-      </div>
-    </div>
-  `,
-})
+// Vue.component('footer-main', {
+//   template: `
+//     <div class="footerMain bbox">
+//       <div class="footerInfo bbox"></div>
+//       <div class="testToolbar bbox">
+//         <div class="testToolbarBtn bbox"></div>
+//         <div class="testToolbarBtn bbox"></div>
+//       </div>
+//     </div>
+//   `,
+// })
 
 
 var app = new Vue({
   el: '#app',
   data: {
+    macOS: false,
     scanning: {
       selection: true,
       fillstroke: true,
     },
     context: {
       menu: [
+        { id: "reverse", label: "Reverse order", enabled: true, checkable: false, checked: false, },
+        { id: "refresh", label: "Refresh panel", enabled: true, checkable: false, checked: false, },
+        { id: "allcolors", label: "Reset colors", enabled: true, checkable: false, checked: false, },
+        { id: "persistent", call: "Hello", label: "Persistent Y/N", enabled: true, checkable: true, checked: false, ingroup: false },
+        { label: "---" },
+        { id: "opt", label: "Sort by:", enabled: false, checkable: false, checked: false, ingroup: false},
+        { id: "sortbytime", label: "Time", enabled: true, checkable: true, checked: true, ingroup: false},
+        { id: "sortbyspectrum", label: "Spectrum", enabled: true, checkable: true, checked: false, ingroup: false},
+        { label: "---" },
+
         {
-          id: "refresh",
-          label: "Refresh panel",
-          enabled: true,
-          checkable: false,
-          checked: false,
+          id: "swatchsize", label: "Swatch size", menu: [
+            { id: "large", label: "Large", enabled: true, checkable: true, checked: true, ingroup: true},
+            { id: "small", label: "Small", enabled: true, checkable: true, checked: false, ingroup: true}, ]
         },
         {
-          id: "allcolors",
-          label: "Document colors",
-          enabled: true,
-          checkable: false,
-          checked: false,
-        },
-        {
-          label: "---"
-        },
-        {
-          id: "scanner",
-          label: "Scanning",
-          menu: [
-            {
-              id: "scanselection",
-              label: "Selection",
-              enabled: true,
-              checkable: true,
-              checked: true,
-            },
-            {
-              id: "scanfillstroke",
-              label: "Fill/Stroke",
-              enabled: true,
-              checkable: true,
-              checked: true,
-            },
-          ]
-        },
-        {
-          id: "sortby",
-          label: "Sort Colors By",
-          menu: [
-            {
-              id: "sortbytime",
-              label: "Time",
-              enabled: true,
-              checkable: true,
-              checked: true,
-            },
-            {
-              id: "sortbyspectrum",
-              label: "Spectrum",
-              enabled: true,
-              checkable: true,
-              checked: false,
-            },
-          ]
-        },
+          id: "scanner", label: "Scanner", menu: [
+            { id: "scandoc", label: "Document colors", enabled: true, checkable: true, checked: true, ingroup: false},
+            { id: "scanselection", label: "Selection", enabled: true, checkable: true, checked: true, ingroup: false},
+            { id: "scanfillstroke", label: "Fill/Stroke", enabled: true, checkable: true, checked: true, ingroup: false},
+            { id: "scanmods", label: "Modifier keys", enabled: true, checkable: true, checked: true, ingroup: false}, ]
+        }
       ],
     },
     panelHeight: 100,
@@ -1044,6 +1023,7 @@ var app = new Vue({
   },
   mounted: function () {
     var self = this;
+    if (navigator.platform.indexOf('Win') > -1) { this.macOS = false; } else if (navigator.platform.indexOf('Mac') > -1) { this.macOS = true; }
     csInterface.setContextMenuByJSON(self.menuString, self.contextMenuClicked);
     this.setContextMenu();
     this.handleResize(null);
@@ -1056,7 +1036,6 @@ var app = new Vue({
   },
   methods: {
     checkForNewColors(msg) {
-      console.log('Newest');
       var stroke = msg.stroke.color, fill = msg.fill.color, local, err = 0, valid = true;
       if (msg.fill.active)
         local = fill;
@@ -1068,14 +1047,14 @@ var app = new Vue({
       if (valid) {
         for (var i = 0; i < this.masterColors.length; i++) {
           if (local !== this.masterColors[i]) {
-            console.log(`${local} !== ${this.masterColors[i]}`);
+            // console.log(`${local} !== ${this.masterColors[i]}`);
             err++;
           }
         }
         // console.log(`${local} : ${err} : ${this.masterColors.length}`);
         if (err == this.masterColors.length) {
-          Event.$emit('addNewSwatch', local)
           this.masterColors.unshift(local);
+          Event.$emit('addNewSwatch', local)
         }
         if (!this.hasSelection)
           Event.$emit('clearSwatchesActive', -1);
@@ -1099,10 +1078,8 @@ var app = new Vue({
             strokes.push(value);
         }
       }
-      fills = this.stripNoAppearanceFrom(fills);
-      strokes = this.stripNoAppearanceFrom(strokes);
-      this.currentFills = fills;
-      this.currentStrokes = strokes;
+      fills = this.stripNoAppearanceFrom(fills), strokes = this.stripNoAppearanceFrom(strokes);
+      this.currentFills = fills, this.currentStrokes = strokes;
       if (fills.length > 1)
         Event.$emit('updateFS_MultiFill', true)
       else
@@ -1132,7 +1109,6 @@ var app = new Vue({
       console.log('Receiving all colors');
       if (/\,/.test(msg))
         msg = JSON.parse(msg);
-      // console.log(msg);
       Event.$emit('constructSwatches', msg)
     },
     wake() {
@@ -1163,8 +1139,7 @@ var app = new Vue({
     parseModifiers(evt) {
       var lastMods = [this.mods.Ctrl, this.mods.Shift, this.mods.Alt]
       if (this.isWake) {
-        // console.log(evt);
-        if (evt.ctrlKey) {
+        if (((!this.macOS) && (evt.ctrlKey)) || ((this.macOS) && (evt.metaKey))) {
           this.mods.Ctrl = true;
         } else {
           this.mods.Ctrl = false;
@@ -1186,26 +1161,93 @@ var app = new Vue({
         Event.$emit('clearMods');
       }
     },
+    findMenuItemParentById(id) {
+      var result;
+      for (var i = 0; i < this.context.menu.length; i++) {
+        for (let [key,value] of Object.entries(this.context.menu[i])) {
+          if (key == "menu") {
+            for (var v = 0; v < value.length; v++) {
+              for (let [index,data] of Object.entries(value[v])) {
+                if ((index == "id") && (data == id))
+                  result = this.context.menu[i];
+              }
+            }
+          }
+          if ((key == "id") && (value == id)) {
+            result = this.context.menu[i];
+          }
+        }
+      }
+      return result;
+    },
+    findMenuItemById(id) {
+      var result;
+      for (var i = 0; i < this.context.menu.length; i++) {
+        for (let [key,value] of Object.entries(this.context.menu[i])) {
+          if (key == "menu") {
+            for (var v = 0; v < value.length; v++) {
+              for (let [index,data] of Object.entries(value[v])) {
+                if ((index == "id") && (data == id))
+                  result = value[v];
+              }
+            }
+          }
+          if ((key == "id") && (value == id)) {
+            result = this.context.menu[i];
+          }
+        }
+      }
+      return result;
+    },
+    toggleMenuItemSiblings(parent, exclude, state) {
+      if (parent.length) {
+        for (var i = 0; i < parent.length; i++) {
+          if (parent[i].id !== exclude)
+            csInterface.updateContextMenuItem(parent[i].id, true, state);
+        }
+      }
+    },
     contextMenuClicked(id) {
-      if (id == "allcolors") {
-        this.getAllAIColors();
-      } else if (id == "refresh") {
+      var target = this.findMenuItemById(id);
+      var parent = this.findMenuItemParentById(id);
+      console.log(`Clicked on ${target.label} of parent ${parent.label}`);
+      if ((target.checkable) && (target.ingroup)) {
+        // console.log('this is currently ' + target.checked);
+        this.toggleMenuItemSiblings(parent.menu, target.id, target.checked);
+        // console.log('this is checkable and should toggle siblings');
+      } else if (target.checkable) {
+        // console.log('This is checkable but isolated');
+      } else {
+        // console.log(`This is a non-checkable action: ${target.label}`);
+      }
+      if (id == 'refresh') {
         location.reload();
       }
-      if (id == "scanselection") {
+      if (id == 'reverse') {
+        Event.$emit('reverseCurrentSwatches');
+      }
+
+      // This is a mess
+      if (id == 'allcolors') {
+        this.getAllAIColors();
+      } else if (id == 'persistent') {
+        console.log('Hello');
+      }
+      if (id == 'scanselection') {
         if (this.scanning.selection)
           Event.$emit('stopSelectionScan');
         else
           Event.$emit('startSelectionScan');
         this.scanning.selection = !this.scanning.selection;
       }
-      if (id == "scanfillstroke") {
+      if (id == 'scanfillstroke') {
         if (this.scanning.fillstroke)
           Event.$emit('stopFillStrokeScan');
         else
           Event.$emit('startFillStrokeScan');
         this.scanning.fillstroke = !this.scanning.fillstroke;
       }
+      //
       if (id == 'sortbyspectrum') {
         var toggle = false;
         if (this.defaultSort) {
@@ -1214,8 +1256,8 @@ var app = new Vue({
         }
         csInterface.updateContextMenuItem(id, true, toggle);
         csInterface.updateContextMenuItem('sortbytime', true, !toggle);
-      }
-      if (id == 'sortbytime') {
+        Event.$emit('setSortBySpectrum', true);
+      } else if (id == 'sortbytime') {
         var toggle = true;
         if (this.defaultSort) {
           toggle = false;
@@ -1223,6 +1265,7 @@ var app = new Vue({
         }
         csInterface.updateContextMenuItem(id, true, toggle);
         csInterface.updateContextMenuItem('sortbyspectrum', true, !toggle);
+        Event.$emit('setSortByTime', true);
       }
     },
     isEqualArray(array1, array2) {

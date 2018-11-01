@@ -10,9 +10,14 @@ Vue.component('proto-colors', {
         <head-main></head-main>
         <body-main></body-main>
       </div>
+      <end v-if="showFoot"></end>
     </div>
   `,
-  // <footer-main></footer-main>
+  data() {
+    return {
+      showFoot: false,
+    }
+  },
   methods: {
     wakeApp(evt) {
       this.$root.wake();
@@ -22,6 +27,14 @@ Vue.component('proto-colors', {
       Event.$emit('clearMods');
     }
   }
+})
+
+Vue.component('end', {
+  template: `
+    <div class="end">
+      <span>1.0</span>
+    </div>
+  `,
 })
 
 Vue.component('head-main', {
@@ -455,7 +468,6 @@ Vue.component('mod-keys', {
       this.activeList = [];
     },
     updateMods() {
-      // console.log('Updating mods');
       this.Ctrl = this.$root.mods.Ctrl;
       this.Shift = this.$root.mods.Shift;
       this.Alt = this.$root.mods.Alt;
@@ -472,6 +484,34 @@ Vue.component('mod-keys', {
   },
   computed: {
     isDefault: function() {return this.$root.isDefault},
+    CtrlShift: function() {
+      if ((this.Ctrl) && (this.Shift)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    CtrlAlt: function() {
+      if ((this.Ctrl) && (this.Alt)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    ShiftAlt: function() {
+      if ((this.Shift) && (this.Alt)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    CtrlShiftAlt: function() {
+      if ((this.Ctrl) && (this.Shift) && (this.Alt)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
   },
 })
 
@@ -667,13 +707,13 @@ Vue.component('body-main', {
         this.$root.masterColors = array;
         var spectrum = this.sortInSpectrum(true);
         this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
-      }
-      else {
+      } else {
         this.swatchList.byTime = mirror.reverse();
         this.$root.masterColors = array.reverse();
         var spectrum = this.sortInSpectrum(true);
         this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum.reverse());
       }
+      Event.$emit('updateSessionColors');
       this.total = mirror.length;
     },
     constructSpectrumSwatches(array) {
@@ -1020,11 +1060,15 @@ var app = new Vue({
         result = false;
       return result;
     },
+    // Ctrl: function() {return this.mods.Ctrl},
+    // Shift: function() {return this.mods.Shift},
+    // Alt: function() {return this.mods.Alt},
   },
   mounted: function () {
     var self = this;
     if (navigator.platform.indexOf('Win') > -1) { this.macOS = false; } else if (navigator.platform.indexOf('Mac') > -1) { this.macOS = true; }
     csInterface.setContextMenuByJSON(self.menuString, self.contextMenuClicked);
+    this.checkStorage();
     this.setContextMenu();
     this.handleResize(null);
     window.addEventListener('resize', this.handleResize);
@@ -1033,8 +1077,30 @@ var app = new Vue({
     Event.$on('modsUpdate', self.parseModifiers);
     Event.$on('checkSelectedColors', self.getSelectedAIColors);
     Event.$on('scanAllAIColors', self.getAllAIColors);
+    Event.$on('updateSessionColors', self.updateSessionColors);
   },
   methods: {
+    updateSessionColors() {
+      window.localStorage.setItem('sessionColors', JSON.stringify(this.masterColors));
+      this.checkStorage();
+    },
+    readStorage() {
+      var storage = window.localStorage;
+      if (!storage.length) {
+        console.log('There is no pre-existing session data');
+        storage.setItem('contextmenu', JSON.stringify(this.context.menu));
+        storage.setItem('contextmenu', JSON.stringify(['#ffffff', '#000000']));
+      } else {
+        console.log('There is pre-existing session data');
+        this.masterColors = JSON.parse(storage.getItem('sessionColors'));
+        this.context = JSON.parse(storage.getItem('contextmenu'));
+      }
+    },
+    checkStorage() {
+      console.log(window.localStorage);
+      // storage.setItem('contextmenu', JSON.stringify(this.context.menu));
+      // console.log(storage); // Shows test: 'is persistent'
+    },
     checkForNewColors(msg) {
       var stroke = msg.stroke.color, fill = msg.fill.color, local, err = 0, valid = true;
       if (msg.fill.active)

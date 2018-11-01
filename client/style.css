@@ -69,13 +69,7 @@ svg {width: 100%;}
 .protocolor-icon-find:before { content: "\e905"; }
 .protocolor-icon-minus:before { content: "\e906"; }
 .protocolor-icon-plus:before { content: "\e907"; }
-::-webkit-scrollbar {background: var(--color-scroll);}
 
-::-webkit-scrollbar-thumb {
-  background: var(--color-scroll-thumb);
-  border-radius: 20px;
-}
-::-webkit-scrollbar-thumb:hover {background: var(--color-scroll-thumb-hover);}
 
 .bbox { box-sizing: border-box; }
 
@@ -87,44 +81,42 @@ svg {width: 100%;}
 
 
 /* Scrollbar */
-  ::-webkit-scrollbar {
-    /* display: none */
-    width: 10px;
-    background: #2A2A2A;
-  }
+::-webkit-scrollbar {
+  width: 10px;
+  background: var(--color-scroll);
+}
 
-  ::-webkit-scrollbar-thumb {
-    background: #3E3E3E;
-    border-radius: 20px;
-  }
+::-webkit-scrollbar-thumb {
+  background: var(--color-scroll-thumb);
+  border-radius: 20px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scroll-thumb-hover);
+}
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: #525252;
-  }
+::-webkit-scrollbar-button {
+  display: none;
+}
 
-  ::-webkit-scrollbar-button {
-    display: none;
-  }
+::-webkit-scrollbar:single-button {
+  /* margin: 1rem 0px; */
+}
 
-  ::-webkit-scrollbar:single-button {
-    /* margin: 1rem 0px; */
-  }
+::-webkit-scrollbar-button:start {
+  /* background-image: url('./scrollbarUpBtnAlt.png'); */
+}
 
-  ::-webkit-scrollbar-button:start {
-    /* background-image: url('./scrollbarUpBtnAlt.png'); */
-  }
+::-webkit-scrollbar-button:end {
+  /* background-image: url('./scrollbarDownBtnAlt.png'); */
+}
 
-  ::-webkit-scrollbar-button:end {
-    /* background-image: url('./scrollbarDownBtnAlt.png'); */
-  }
+::-webkit-scrollbar-button:start:hover {
+  /* background-image: url('./scrollbarUpBtnAltHover.png'); */
+}
 
-  ::-webkit-scrollbar-button:start:hover {
-    /* background-image: url('./scrollbarUpBtnAltHover.png'); */
-  }
-
-  ::-webkit-scrollbar-button:end:hover {
-    /* background-image: url('./scrollbarDownBtnAltHover.png'); */
-  }
+::-webkit-scrollbar-button:end:hover {
+  /* background-image: url('./scrollbarDownBtnAltHover.png'); */
+}
 
 
 

@@ -202,7 +202,7 @@ Vue.component('scanner', {
       } else {
         this.stopSelectionScan();
       }
-      console.log(`Selection is ${this.isScanning}`);
+      // console.log(`Selection is ${this.isScanning}`);
     },
     fillstrokeRead(msg) {
       var last = this.lastFillStroke;
@@ -243,7 +243,7 @@ Vue.component('scanner', {
         this.scanFillStroke(this.isScanning);
       else
         this.stopFillStrokeScan();
-      console.log(`Fillstroke is ${this.isScanning}`);
+      // console.log(`Fillstroke is ${this.isScanning}`);
     },
     toggleScans() {
       this.toggleSelectionScan()
@@ -585,6 +585,7 @@ Vue.component('body-main', {
   mounted() {
     var self = this;
     Event.$on('constructSwatches', self.readAllSwatches);
+    Event.$on('persistentLaunch', self.readAltList);
     Event.$on('swatchClearHoverEvt', self.clearSwatchesHover);
     Event.$on('addNewSwatch', self.addNewSwatch);
     Event.$on('clearSwatchesActive', self.clearSwatchesActive)
@@ -619,6 +620,10 @@ Vue.component('body-main', {
     readAllSwatches(msg) {
       var uniques = this.getUniqueColors(msg);
       console.log(uniques);
+      this.constructSwatches(uniques);
+    },
+    readAltList(array) {
+      this.constructSwatches(array);
     },
     getUniqueColors(array) {
       var allColors = [];
@@ -629,7 +634,6 @@ Vue.component('body-main', {
           allColors.push(array[i].stroke)
       }
       var results = this.$root.removeDuplicatesInArray(allColors);
-      this.constructSwatches(results);
       return results;
     },
     addNewSwatch(color) {
@@ -647,10 +651,10 @@ Vue.component('body-main', {
         this.swatchList.byTime.unshift(clone);
       else
         this.swatchList.byTime.push(clone);
-
       this.resetSwatchKeys();
       var spectrum = this.sortInSpectrum(true);
       this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
+      Event.$emit('updateSessionColors');
     },
     deleteSwatch(index) {
       var self = this;
@@ -754,9 +758,11 @@ Vue.component('body-main', {
       var target = this.swatchList[which];
       for (var i = 0; i < target.length; i++) {
         target[i].isHover = false;
+        target[i].showPrefix = false;
       }
     },
     sortInSpectrum(forward=true) {
+      // This is stacking errors on jaistlyn's file
       var self = this;
       // console.log("Sorting: " + colorHistory);
       var n = [];
@@ -778,7 +784,7 @@ Vue.component('body-main', {
           sorted.unshift(hslToHex(n[index][0], n[index][1], n[index][2]));
         }
       }
-      console.log("Sorted: " + sorted);
+      // console.log("Sorted: " + sorted);
       return sorted;
     }
     // endDrag() {
@@ -936,9 +942,9 @@ Vue.component('swatch-list', {
       Event.$emit('swatchClearHoverEvt', swatch.key);
       swatch.isHover = true;
       swatch.showPrefix = true;
-      // console.log(swatch);
     },
     hidePrefix(swatch) {
+      swatch.isHover = false;
       swatch.showPrefix = false;
     }
   }
@@ -1008,16 +1014,17 @@ var app = new Vue({
   el: '#app',
   data: {
     macOS: false,
+    persistent: false,
     scanning: {
       selection: true,
       fillstroke: true,
     },
     context: {
       menu: [
-        { id: "reverse", label: "Reverse order", enabled: true, checkable: false, checked: false, },
-        { id: "refresh", label: "Refresh panel", enabled: true, checkable: false, checked: false, },
-        { id: "allcolors", label: "Reset colors", enabled: true, checkable: false, checked: false, },
-        { id: "persistent", call: "Hello", label: "Persistent Y/N", enabled: true, checkable: true, checked: false, ingroup: false },
+        { id: "reverse", path: "menu[0]", label: "Reverse order", enabled: true, checkable: false, checked: false, },
+        { id: "refresh", path: "menu[1]", label: "Refresh panel", enabled: true, checkable: false, checked: false, },
+        { id: "allcolors", path: "menu[2]", label: "Reset colors", enabled: true, checkable: false, checked: false, },
+        { id: "persistent", path: "menu[3]", label: "Persistent Y/N", enabled: true, checkable: true, checked: false, ingroup: false },
         { label: "---" },
         { id: "opt", label: "Sort by:", enabled: false, checkable: false, checked: false, ingroup: false},
         { id: "sortbytime", label: "Time", enabled: true, checkable: true, checked: true, ingroup: false},
@@ -1060,20 +1067,20 @@ var app = new Vue({
         result = false;
       return result;
     },
-    // Ctrl: function() {return this.mods.Ctrl},
-    // Shift: function() {return this.mods.Shift},
-    // Alt: function() {return this.mods.Alt},
   },
   mounted: function () {
     var self = this;
     if (navigator.platform.indexOf('Win') > -1) { this.macOS = false; } else if (navigator.platform.indexOf('Mac') > -1) { this.macOS = true; }
-    csInterface.setContextMenuByJSON(self.menuString, self.contextMenuClicked);
-    this.checkStorage();
+    this.readStorage();
+    // csInterface.setContextMenuByJSON(self.menuString, self.contextMenuClicked);
     this.setContextMenu();
     this.handleResize(null);
     window.addEventListener('resize', this.handleResize);
     this.setCSSHeight();
-    this.getAllAIColors();
+    if (!this.persistent)
+      this.getAllAIColors();
+    else
+      Event.$emit('persistentLaunch', self.masterColors)
     Event.$on('modsUpdate', self.parseModifiers);
     Event.$on('checkSelectedColors', self.getSelectedAIColors);
     Event.$on('scanAllAIColors', self.getAllAIColors);
@@ -1082,24 +1089,39 @@ var app = new Vue({
   methods: {
     updateSessionColors() {
       window.localStorage.setItem('sessionColors', JSON.stringify(this.masterColors));
-      this.checkStorage();
+      // this.checkStorage();
+    },
+    updateStorage() {
+      var storage = window.localStorage, self = this;
+      console.log('Updating local storage...');
+      storage.setItem('contextmenu', JSON.stringify(self.context.menu));
+      storage.setItem('sessionColors', JSON.stringify(self.masterColors));
+      storage.setItem('persistent', JSON.stringify(self.persistent));
     },
     readStorage() {
       var storage = window.localStorage;
       if (!storage.length) {
         console.log('There is no pre-existing session data');
         storage.setItem('contextmenu', JSON.stringify(this.context.menu));
-        storage.setItem('contextmenu', JSON.stringify(['#ffffff', '#000000']));
+        storage.setItem('sessionColors', JSON.stringify(['#ffffff', '#000000']));
+        storage.setItem('persistent', JSON.stringify(false));
       } else {
         console.log('There is pre-existing session data');
         this.masterColors = JSON.parse(storage.getItem('sessionColors'));
-        this.context = JSON.parse(storage.getItem('contextmenu'));
+        this.context.menu = JSON.parse(storage.getItem('contextmenu'));
+        this.persistent = JSON.parse(storage.getItem('persistent'));
+        // console.log(this.context.menu);
+        // console.log(mirror);
       }
+      console.log(storage);
+      // console.log(this.persistent);
+    },
+    readConfigFromStorage() {
+      console.log('Reading prior persistence');
+      csInterface.updateContextMenuItem('persistent', true, self.persistent);
     },
     checkStorage() {
       console.log(window.localStorage);
-      // storage.setItem('contextmenu', JSON.stringify(this.context.menu));
-      // console.log(storage); // Shows test: 'is persistent'
     },
     checkForNewColors(msg) {
       var stroke = msg.stroke.color, fill = msg.fill.color, local, err = 0, valid = true;
@@ -1189,7 +1211,18 @@ var app = new Vue({
     },
     setContextMenu() {
       var self = this;
+      // console.log('setting context menu');
       csInterface.setContextMenuByJSON(self.menuString, self.contextMenuClicked);
+      csInterface.updateContextMenuItem('persistent', true, self.persistent);
+      this.handleConfig();
+    },
+    handleConfig() {
+      var sort = this.findMenuItemById('sortbytime');
+      if (sort.checked) {
+        Event.$emit('setSortByTime', true);
+      } else {
+        Event.$emit('setSortBySpectrum', true);
+      }
     },
     handleResize(evt) {
       this.panelWidth = document.documentElement.clientWidth;
@@ -1269,20 +1302,22 @@ var app = new Vue({
       if (parent.length) {
         for (var i = 0; i < parent.length; i++) {
           if (parent[i].id !== exclude)
-            csInterface.updateContextMenuItem(parent[i].id, true, state);
+            csInterface.updateContextMenuItem(parent[i].id, true, !state);
         }
       }
     },
     contextMenuClicked(id) {
       var target = this.findMenuItemById(id);
       var parent = this.findMenuItemParentById(id);
-      console.log(`Clicked on ${target.label} of parent ${parent.label}`);
-      if ((target.checkable) && (target.ingroup)) {
+      console.log(`Clicked on ${target.label} with check: ${target.checked}`);
+      if ((target.checkable) && (target.ingroup) && (!target.checked)) {
         // console.log('this is currently ' + target.checked);
+        target.checked = !target.checked;
         this.toggleMenuItemSiblings(parent.menu, target.id, target.checked);
         // console.log('this is checkable and should toggle siblings');
-      } else if (target.checkable) {
-        // console.log('This is checkable but isolated');
+      } else if ((target.checkable) && (!target.checked)) {
+        target.checked = !target.checked;
+        // console.log(`Toggling to ${target.checked}`);
       } else {
         // console.log(`This is a non-checkable action: ${target.label}`);
       }
@@ -1297,7 +1332,11 @@ var app = new Vue({
       if (id == 'allcolors') {
         this.getAllAIColors();
       } else if (id == 'persistent') {
-        console.log('Hello');
+        this.persistent = !this.persistent;
+        target.checked = !target.checked;
+        console.log(this.persistent);
+        console.log(target);
+        // console.log('Hello');
       }
       if (id == 'scanselection') {
         if (this.scanning.selection)
@@ -1314,25 +1353,45 @@ var app = new Vue({
         this.scanning.fillstroke = !this.scanning.fillstroke;
       }
       //
-      if (id == 'sortbyspectrum') {
-        var toggle = false;
-        if (this.defaultSort) {
-          toggle = true;
-          this.defaultSort = !toggle;
-        }
-        csInterface.updateContextMenuItem(id, true, toggle);
-        csInterface.updateContextMenuItem('sortbytime', true, !toggle);
-        Event.$emit('setSortBySpectrum', true);
-      } else if (id == 'sortbytime') {
+      if (id == 'sortbytime') {
         var toggle = true;
-        if (this.defaultSort) {
-          toggle = false;
-          this.defaultSort = !toggle;
+        console.log(target.checked);
+        if (target.checked) {
+          toggle = !target.checked;
+          // this.defaultSort = !toggle;
+          // csInterface.updateContextMenuItem(id, true, toggle);
+          csInterface.updateContextMenuItem('sortbytime', true, !toggle);
+          this.context.menu[7].checked = toggle;
+          csInterface.updateContextMenuItem('sortbyspectrum', true, toggle);
+          Event.$emit('setSortByTime', true);
+        // } else if (target.checked) {
+        //   console.log('Not default sort');
+        } else {
+          console.log('Already checked');
+          csInterface.updateContextMenuItem(id, true, true);
+          // target.checked = true;
         }
-        csInterface.updateContextMenuItem(id, true, toggle);
-        csInterface.updateContextMenuItem('sortbyspectrum', true, !toggle);
-        Event.$emit('setSortByTime', true);
+      } else if (id == 'sortbyspectrum') {
+        var toggle = false;
+        console.log(target.checked);
+        if (target.checked) {
+          toggle = !target.checked;
+          // this.defaultSort = !toggle;
+          csInterface.updateContextMenuItem('sortbyspectrum', true, !toggle);
+          this.context.menu[6].checked = toggle;
+          csInterface.updateContextMenuItem('sortbytime', true, toggle);
+          Event.$emit('setSortBySpectrum', true);
+        // } else if (target.checked) {
+        //   console.log('Not default sort');
+        } else {
+          console.log('Already checked');
+          csInterface.updateContextMenuItem(id, true, true);
+          // target.checked = true;
+        }
       }
+
+      this.updateStorage();
+      // this.setContextMenu();
     },
     isEqualArray(array1, array2) {
       array1 = array1.join().split(','), array2 = array2.join().split(',');

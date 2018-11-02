@@ -2,24 +2,22 @@ var exist = app.documents.length > 0;
 function scanSelection() {
     var doc = app.documents[0];
     var result = [];
-    for (var i = 0; i < doc.pageItems.length; i++) {
-        var child = doc.pageItems[i];
-        if (child.selected)
-            result.push(i);
+    if (doc.pageItems.length) {
+        for (var i = 0; i < doc.pageItems.length; i++) {
+            var child = doc.pageItems[i];
+            if (child.selected)
+                result.push(i);
+        }
     }
-    // if ((result.length == 1) && (result[0] !== lastresult)) {
-    //   // autoAdjustFS(result[0]);
-    //   lastresult = result[0];
-    // }
+    if (doc.textFrames.length) {
+        for (var i = 0; i < doc.textFrames.length; i++) {
+            var child = doc.textFrames[i];
+            if (child.selected)
+                result.push(i);
+        }
+    }
     return result;
 }
-// This doesn't work.
-// function autoAdjustFS(index) {
-//   var doc = app.documents[0];
-//   var item = doc.pageItems[index];
-//   if ((item.filled) && (!item.stroked))
-//     app.isFillActive(true);
-// }
 function scanFillActive() {
     return app.isFillActive();
 }
@@ -32,10 +30,20 @@ function setDefaultStroke(hex) {
     doc.defaultStrokeColor = colorToIllustrator(hex);
 }
 function colorToIllustrator(newColor) {
-    var nColor = new RGBColor;
-    nColor.red = hexToRgb(newColor).r;
-    nColor.green = hexToRgb(newColor).g;
-    nColor.blue = hexToRgb(newColor).b;
+    var type = app.documents[0].documentColorSpace;
+    if (type == DocumentColorSpace.RGB) {
+        var nColor = new RGBColor;
+        nColor.red = hexToRgb(newColor).r;
+        nColor.green = hexToRgb(newColor).g;
+        nColor.blue = hexToRgb(newColor).b;
+    }
+    else if (type == DocumentColorSpace.CMYK) {
+        var nColor = new CMYKColor;
+        nColor.cyan = hexToCMYK(hex).c;
+        nColor.magenta = hexToCMYK(hex).m;
+        nColor.yellow = hexToCMYK(hex).y;
+        nColor.black = hexToCMYK(hex).k;
+    }
     return nColor;
 }
 function colorFromIllustrator() {
@@ -45,8 +53,17 @@ function colorFromIllustrator() {
         defaultColor = strokeColorFromAI();
     return defaultColor;
 }
-function rgbAI(rgb) {
-    return rgbToHex(rgb.red, rgb.green, rgb.blue);
+// alert(app.activeDocument.colorProfileName)
+function masterColorToAI(color) {
+    var type = app.documents[0].documentColorSpace, result;
+    if (type == DocumentColorSpace.RGB) {
+        result = rgbToHex(color.red, color.green, color.blue);
+    }
+    else if (type == DocumentColorSpace.CMYK) {
+        convert = app.convertSampleColor(ImageColorSpace.CMYK, [color.cyan, color.magenta, color.yellow, color.black], ImageColorSpace.RGB, ColorConvertPurpose.defaultpurpose);
+        result = rgbToHex(convert[0], convert[1], convert[2]);
+    }
+    return result;
 }
 function validateArray(arrs) {
     var valid = true, anno = '';
@@ -72,7 +89,7 @@ function selectSameFill(color) {
     var result = [], doc = app.documents[0];
     for (var i = 0; i < doc.pageItems.length; i++) {
         var child = doc.pageItems[i];
-        if ((child.filled) && (color == rgbAI(child.fillColor)))
+        if ((child.filled) && (color == masterColorToAI(child.fillColor)))
             child.selected = true;
     }
 }
@@ -81,7 +98,7 @@ function selectSameStroke(color) {
     var result = [], doc = app.documents[0];
     for (var i = 0; i < doc.pageItems.length; i++) {
         var child = doc.pageItems[i];
-        if ((child.stroked) && (color == rgbAI(child.strokeColor)))
+        if ((child.stroked) && (color == masterColorToAI(child.strokeColor)))
             child.selected = true;
     }
 }
@@ -89,7 +106,7 @@ function addSameFill(color) {
     var result = [], doc = app.documents[0];
     for (var i = 0; i < doc.pageItems.length; i++) {
         var child = doc.pageItems[i];
-        if ((child.filled) && (color == rgbAI(child.fillColor)))
+        if ((child.filled) && (color == masterColorToAI(child.fillColor)))
             child.selected = true;
     }
 }
@@ -97,28 +114,8 @@ function addSameStroke(color) {
     var result = [], doc = app.documents[0];
     for (var i = 0; i < doc.pageItems.length; i++) {
         var child = doc.pageItems[i];
-        if ((child.stroked) && (color == rgbAI(child.strokeColor)))
+        if ((child.stroked) && (color == masterColorToAI(child.strokeColor)))
             child.selected = true;
-    }
-}
-function swapStrokes(color1, color2) {
-    var result = [], doc = app.documents[0];
-    for (var i = 0; i < doc.pageItems.length; i++) {
-        var child = doc.pageItems[i];
-        if ((child.stroked) && (color1 == rgbAI(child.strokeColor)))
-            child.strokeColor = colorToIllustrator(color2);
-        if ((child.stroked) && (color2 == rgbAI(child.strokeColor)))
-            child.strokeColor = colorToIllustrator(color1);
-    }
-}
-function swapFills(color1, color2) {
-    var result = [], doc = app.documents[0];
-    for (var i = 0; i < doc.pageItems.length; i++) {
-        var child = doc.pageItems[i];
-        if ((child.filled) && (color1 == rgbAI(child.fillColor)))
-            child.fillColor = colorToIllustrator(color2);
-        if ((child.filled) && (color2 == rgbAI(child.fillColor)))
-            child.fillColor = colorToIllustrator(color1);
     }
 }
 function clearSelection() {
@@ -134,10 +131,10 @@ function scanSelectedColors(arrs) {
             if (child.selected) {
                 var clone = { fill: 'none', stroke: 'none', index: target };
                 if (child.filled) {
-                    clone.fill = rgbAI(child.fillColor);
+                    clone.fill = masterColorToAI(child.fillColor);
                 }
                 if (child.stroked) {
-                    clone.stroke = rgbAI(child.strokeColor);
+                    clone.stroke = masterColorToAI(child.strokeColor);
                 }
             }
             result.push(clone);
@@ -151,9 +148,9 @@ function scanAllColors() {
         var child = doc.pageItems[i];
         var clone = { fill: 'none', stroke: 'none', index: i };
         if (child.filled)
-            clone.fill = rgbAI(child.fillColor);
+            clone.fill = masterColorToAI(child.fillColor);
         if (child.stroked)
-            clone.stroke = rgbAI(child.strokeColor);
+            clone.stroke = masterColorToAI(child.strokeColor);
         result.push(clone);
     }
     return JSON.stringify(result);
@@ -179,13 +176,13 @@ function scanFillStroke() {
         child.fill.active = true;
     }
     try {
-        child.fill.color = rgbAI(doc.defaultFillColor);
+        child.fill.color = masterColorToAI(doc.defaultFillColor);
     }
     catch (e) {
         child.fill.color = 'white';
     }
     try {
-        child.stroke.color = rgbAI(doc.defaultStrokeColor);
+        child.stroke.color = masterColorToAI(doc.defaultStrokeColor);
     }
     catch (e) {
         child.stroke.color = 'white';
@@ -196,3 +193,24 @@ function scanFillStroke() {
         child.stroke.hasColor = true;
     return JSON.stringify(child);
 }
+// function swapStrokes(color1, color2) {
+//   var result = [], doc = app.documents[0];
+//   for (var i = 0; i < doc.pageItems.length; i++) {
+//     var child = doc.pageItems[i];
+//     if ((child.stroked) && (color1 == masterColorToAI(child.strokeColor)))
+//       child.strokeColor = colorToIllustrator(color2);
+//     if ((child.stroked) && (color2 == masterColorToAI(child.strokeColor)))
+//       child.strokeColor = colorToIllustrator(color1);
+//   }
+// }
+//
+// function swapFills(color1, color2) {
+//   var result = [], doc = app.documents[0];
+//   for (var i = 0; i < doc.pageItems.length; i++) {
+//     var child = doc.pageItems[i];
+//     if ((child.filled) && (color1 == masterColorToAI(child.fillColor)))
+//       child.fillColor = colorToIllustrator(color2);
+//     if ((child.filled) && (color2 == masterColorToAI(child.fillColor)))
+//       child.fillColor = colorToIllustrator(color1);
+//   }
+// }

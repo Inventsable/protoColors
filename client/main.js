@@ -1013,6 +1013,14 @@ Vue.component('swatch-tag', {
 var app = new Vue({
   el: '#app',
   data: {
+    activeApp: csInterface.hostEnvironment.appName,
+    activeTheme: 'darkest',
+    themes: {
+      lightest: '#f0f0f0',
+      light: '#b8b8b8',
+      dark: '#535353',
+      darkest: '#323232',
+    },
     macOS: false,
     persistent: false,
     scanning: {
@@ -1072,7 +1080,6 @@ var app = new Vue({
     var self = this;
     if (navigator.platform.indexOf('Win') > -1) { this.macOS = false; } else if (navigator.platform.indexOf('Mac') > -1) { this.macOS = true; }
     this.readStorage();
-    // csInterface.setContextMenuByJSON(self.menuString, self.contextMenuClicked);
     this.setContextMenu();
     this.handleResize(null);
     window.addEventListener('resize', this.handleResize);
@@ -1085,8 +1092,31 @@ var app = new Vue({
     Event.$on('checkSelectedColors', self.getSelectedAIColors);
     Event.$on('scanAllAIColors', self.getAllAIColors);
     Event.$on('updateSessionColors', self.updateSessionColors);
+    csInterface.addEventListener(CSInterface.THEME_COLOR_CHANGED_EVENT, self.appThemeChanged);
+    this.appThemeChanged();
   },
   methods: {
+    appThemeChanged(event) {
+      var skinInfo = JSON.parse(window.__adobe_cep__.getHostEnvironment()).appSkinInfo;
+      this.findTheme(skinInfo);
+      console.log(`Theme changed to ${this.activeTheme}`);
+      this.updateStorage();
+    },
+    findTheme(appSkin) {
+      if (toHex(appSkin.panelBackgroundColor.color) == '#f0f0f0') {
+        this.activeTheme = 'lightest';
+      } else if (toHex(appSkin.panelBackgroundColor.color) == '#b8b8b8') {
+        this.activeTheme = 'light';
+      } else if (toHex(appSkin.panelBackgroundColor.color) == '#535353') {
+        this.activeTheme = 'dark';
+      } else if (toHex(appSkin.panelBackgroundColor.color) == '#323232') {
+        this.activeTheme = 'darkest';
+      } else {
+        console.log('Theme is not recognized')
+      }
+      this.setCSS('color-bg', toHex(appSkin.panelBackgroundColor.color));
+      this.setCSS('color-ui-hover', toHex(appSkin.panelBackgroundColor.color, -15));
+    },
     updateSessionColors() {
       window.localStorage.setItem('sessionColors', JSON.stringify(this.masterColors));
       // this.checkStorage();
@@ -1097,6 +1127,9 @@ var app = new Vue({
       storage.setItem('contextmenu', JSON.stringify(self.context.menu));
       storage.setItem('sessionColors', JSON.stringify(self.masterColors));
       storage.setItem('persistent', JSON.stringify(self.persistent));
+      storage.setItem('theme', self.activeTheme);
+      storage.setItem('appName', self.activeApp);
+
     },
     readStorage() {
       var storage = window.localStorage;
@@ -1105,13 +1138,15 @@ var app = new Vue({
         storage.setItem('contextmenu', JSON.stringify(this.context.menu));
         storage.setItem('sessionColors', JSON.stringify(['#ffffff', '#000000']));
         storage.setItem('persistent', JSON.stringify(false));
+        storage.setItem('theme', self.activeTheme);
+        storage.setItem('appName', self.activeApp);
       } else {
         console.log('There is pre-existing session data');
         this.masterColors = JSON.parse(storage.getItem('sessionColors'));
         this.context.menu = JSON.parse(storage.getItem('contextmenu'));
         this.persistent = JSON.parse(storage.getItem('persistent'));
-        // console.log(this.context.menu);
-        // console.log(mirror);
+        this.activeTheme = storage.getItem('theme');
+        this.appName = storage.getItem('appName');
       }
       console.log(storage);
       // console.log(this.persistent);

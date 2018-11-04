@@ -186,7 +186,7 @@ svg {width: 100%;}
 
 .inSelectionCell {
   box-sizing: border-box;
-  background-color: var(--color-ui-hover);
+  background-color: transparent;
 }
 
 .headerVisualizers {

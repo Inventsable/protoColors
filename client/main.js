@@ -422,7 +422,12 @@ Vue.component('visualizers', {
 
 Vue.component('mod-keys', {
   template: `
-    <div v-mousemove-outside="onMouseOutside" class="visualizerModKeys" :style="'grid-template-columns: repeat(' + this.activeList.length + ', 1fr);'">
+    <div 
+      v-mousemove-outside="onMouseOutside"
+      v-keydown-outside="onKeyDownOutside"
+      v-keyup-outside="onKeyUpOutside"
+      class="visualizerModKeys" 
+      :style="'grid-template-columns: repeat(' + this.activeList.length + ', 1fr);'">
       <div v-for="modKey in activeList" :class="getModKeyClass(modKey)"></div>
     </div>
   `,
@@ -478,7 +483,12 @@ Vue.component('mod-keys', {
       return style += 'Active';
     },
     onMouseOutside(e, el) {
-      // console.log('Checking mods');
+      this.$root.parseModifiers(e);
+    },
+    onKeyDownOutside(e, el) {
+      this.$root.parseModifiers(e);
+    }, 
+    onKeyUpOutside(e, el) {
       this.$root.parseModifiers(e);
     },
   },
@@ -808,7 +818,9 @@ Vue.component('swatch-list', {
     model: Array,
   },
   computed: {
-    isDefault: function() { return this.$root.isDefault },
+    isDefault: function() { 
+      return this.$root.isDefault 
+    },
   },
   template: `
     <div class="swatchList bbox">
@@ -941,7 +953,24 @@ Vue.component('swatch-list', {
     showPrefix(swatch) {
       Event.$emit('swatchClearHoverEvt', swatch.key);
       swatch.isHover = true;
-      swatch.showPrefix = true;
+      // if ((this.onlyCtrl) || (this.onlyShift) || (this.onlyAlt))
+        swatch.showPrefix = true;
+      // else
+      //   swatch.showPrefix = false;
+
+      // if (this.$root.isDefault) {
+      //   str += 'Def'
+      // } else if ((this.$root.mods.Ctrl) && (!this.$root.mods.Shift) && (!this.$root.mods.Alt)) {
+      //   str += 'cursor'
+      // } else if ((this.$root.mods.Shift) && (!this.$root.mods.Ctrl) && (!this.$root.mods.Alt)) {
+      //   str += 'plus'
+      // } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (!this.$root.mods.Ctrl)) {
+      //   str += 'cancel'
+      // } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (this.$root.mods.Ctrl)) {
+      //   str += 'cancel'
+      // } else {
+      //   str += 'Multi'
+      // }
     },
     hidePrefix(swatch) {
       swatch.isHover = false;

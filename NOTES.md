@@ -2,21 +2,21 @@
 
 * Variable swatch height
 * ~~Verify mac command modifier key works (mask as Ctrl on root.parseModifiers)~~
-* Persistent across sessions [toggle]
+* ~~Persistent across sessions [toggle]~~
 
 ## to-do
 
-* Use computed properties as modifiers for isolated Ctrl, Shift, Alt, Ctrl+Shift, Ctrl+Alt, etc.
-* Rework swatchList style to support infinite height
-* Gray colors are too hard to see? Provide contrast frame if swatch value is same as bg.
-* Add CMYK backdoor if document color type
-* Load config of context menu settings on mounted()
-* Context menu toggle for Sort By breaks easily
-* Support textFrame scanning
-* Delete/snip swatch
-* MagicMirror UI background color
-* Alt + Swatchclick: Delete / Replace
+* Swatches have no contrast mechanic if same as background of panel.
 * Trace Paper -- replaces colorHistory "Highlight". Generate layer above current artwork, replicate paths and fills/strokes, place solid white w/ artboard dimensions and lowered opacity beneath. Delete layer when not hovering.
+* ~~Use computed properties as modifiers for isolated Ctrl, Shift, Alt, Ctrl+Shift, Ctrl+Alt, etc.~~
+* ~~Rework swatchList style to support infinite height~~
+* ~~Add CMYK backdoor if document color type~~
+* ~~Load config of context menu settings on mounted()~~
+* ~~Context menu toggle for Sort By breaks easily~~
+* ~~Support textFrame scanning~~
+* ~~Delete/snip swatch~~
+* ~~MagicMirror UI background color~~
+* ~~Alt + Swatchclick: Delete / Replace~~
 * ~~No interruptions or problems on document change~~
 * ~~Fix swatchList if no colors preset~~
 * ~~Fix swatch.key inaccuracies on addNewSwatch~~
@@ -74,5 +74,4 @@
       > alt: minus x
       > replace
       > find
-
 ```

@@ -1,0 +1,24 @@
+{
+  "name": "protoColors",
+  "version": "1.0.0",
+  "description": "``` bash\r # ...User/AppData/Roaming/Adobe/CEP/extensions\r git clone https://github.com/Inventsable/protoColors.git\r ```",
+  "main": "index.js",
+  "dependencies": {
+    "types-for-adobe": "github:pravdomil/types-for-adobe"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Inventsable/protoColors.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Inventsable/protoColors/issues"
+  },
+  "homepage": "https://github.com/Inventsable/protoColors#readme"
+}

@@ -1,12 +1,11 @@
 {
-  "compileOnSave": true,
   "compilerOptions": {
     "outFile": "./host.jsx",
     "allowJs": true,
     "noLib": true,
-    "module": "commonjs",
+    "module": "amd",
     "types": [
-      "types-for-adobe/illustrator/2015.3"
+      "types-for-adobe/Photoshop/2015.5"
     ]
   },
   "files": [

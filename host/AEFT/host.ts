@@ -54,7 +54,7 @@ function scanColor(propGroup, colorList) {
     if ((prop.propertyType === PropertyType.PROPERTY)
       && (/(ADBE\sVector\s(Fill|Stroke)\sColor)/i.test(prop.matchName))) {
       var temp = rgbToHex(prop.value[0] * 255, prop.value[1] * 255, prop.value[2] * 255);
-      colorList.push(temp)
+      colorList.push(temp);
     } else if ((prop.propertyType === PropertyType.INDEXED_GROUP) || (prop.propertyType === PropertyType.NAMED_GROUP)) {
       scanColor(prop, colorList);
     }

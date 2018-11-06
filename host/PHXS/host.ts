@@ -1,5 +1,3 @@
-// Compile on save successful
-
 function scanFGBG() {
   // alert('hello')
   return 'hello';

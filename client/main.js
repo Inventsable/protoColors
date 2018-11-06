@@ -1,13 +1,12 @@
 var csInterface = new CSInterface();
 loadUniversalJSXLibraries();
-
 loadJSX(csInterface.hostEnvironment.appName + '/host.jsx');
 window.Event = new Vue();
 
 Vue.component('proto-colors', {
   template: `
     <div class="appGrid" @mouseover="wakeApp" @mouseout="sleepApp">
-      <div :class="'mainTop' + this.$root.activeApp">
+      <div :class="'mainTop-' + this.$root.activeApp">
         <head-main></head-main>
         <body-main></body-main>
       </div>
@@ -41,16 +40,16 @@ Vue.component('end', {
 Vue.component('head-main', {
   // sort-by and scanner are hidden
   template: `
-    <div :class="appHeadClass">
+    <div class="headerMain">
       <scanner></scanner>
       <visualizers></visualizers>
     </div>
   `,
-  methods: {
-    appHeadClass() {
-      return `headerMain-${this.$root.activeApp}`;
-    }
-  }
+  // methods: {
+  //   appHeadClass() {
+  //     return `headerMain`;
+  //   }
+  // }
 })
 
 Vue.component('selection-colors', {
@@ -77,14 +76,21 @@ Vue.component('selection-colors', {
   },
   methods: {
     getUniqueColors(array) {
+      console.log(array)
       var allColors = [];
-      for (var i = 0; i < array.length; i++) {
-        if (array[i].fill !== 'none')
-          allColors.push(array[i].fill)
-        if (array[i].stroke !== 'none')
-          allColors.push(array[i].stroke)
+      if (this.$root.activeApp == 'ILST') {
+        for (var i = 0; i < array.length; i++) {
+          if (array[i].fill !== 'none')
+            allColors.push(array[i].fill)
+          if (array[i].stroke !== 'none')
+            allColors.push(array[i].stroke)
+        }
+      } else {
+        allColors = array;
       }
       var results = this.$root.removeDuplicatesInArray(allColors);
+      results = this.$root.removeEmptyValues(results);
+      console.log(results)
       this.constructSelection(results);
     },
     gridStyle() {
@@ -101,7 +107,9 @@ Vue.component('selection-colors', {
         Event.$emit('checkSelectedColors', array)
       } else {
         this.$root.hasSelection = false;
-        Event.$emit('recheckFillStroke')
+        if (this.$root.activeApp == 'ILST') {
+          Event.$emit('recheckFillStroke')
+        }
         this.clearSelection();
       }
       // console.log(array);
@@ -191,7 +199,7 @@ Vue.component('scanner', {
     },
     selectionCheck() {
       var self = this;
-      if (this.$root.activeApp == 'ILST')
+      if (this.$root.activeApp == 'ILST'||'AEFT')
         csInterface.evalScript(`scanSelection()`, self.selectionRead)
     },
     scanSelection(state) {
@@ -237,8 +245,11 @@ Vue.component('scanner', {
       var self = this;
       if (this.$root.activeApp == 'ILST')
         csInterface.evalScript(`scanFillStroke()`, self.fillstrokeRead)
-      else
+      else if (this.$root.activeApp == 'PHXS')
         csInterface.evalScript(`scanFGBG()`, self.fillstrokeRead)
+      // else if (this.$root.activeApp == 'AEFT') {
+      //   // console.log(`w${window.innerWidth} h${window.innerHeight}`)        
+      // }
     },
     scanFillStroke(state) {
       var self = this;
@@ -429,8 +440,6 @@ Vue.component('visualizers', {
       <selection-colors></selection-colors>
     </div>
   `,
-  methods : {
-  }
 })
 
 Vue.component('mod-keys', {
@@ -637,6 +646,7 @@ Vue.component('body-main', {
       if (this.$root.activeApp == 'ILST') { 
         Event.$emit('scanAllAIColors');
       } else {
+        // includes AE for some reason
         Event.$emit('scanAllPSColors');
       }
     },
@@ -675,12 +685,17 @@ Vue.component('body-main', {
       this.constructSwatches(array);
     },
     getUniqueColors(array) {
+      // only for AI and AE
       var allColors = [];
-      for (var i = 0; i < array.length; i++) {
-        if (array[i].fill !== 'none')
-          allColors.push(array[i].fill)
-        if (array[i].stroke !== 'none')
-          allColors.push(array[i].stroke)
+      if (this.$root.activeApp == 'ILST') {
+        for (var i = 0; i < array.length; i++) {
+          if (array[i].fill !== 'none')
+            allColors.push(array[i].fill)
+          if (array[i].stroke !== 'none')
+            allColors.push(array[i].stroke)
+        }
+      } else {
+        allColors = array;
       }
       var results = this.$root.removeDuplicatesInArray(allColors);
       return results;
@@ -700,7 +715,7 @@ Vue.component('body-main', {
         this.swatchList.byTime.unshift(clone);
       else
         this.swatchList.byTime.push(clone);
-      this.resetSwatchKeys();
+      // this.resetSwatchKeys();
       var spectrum = this.sortInSpectrum(true);
       this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
       Event.$emit('updateSessionColors');
@@ -708,15 +723,28 @@ Vue.component('body-main', {
     deleteSwatch(index) {
       var self = this;
       if (!this.reverse)
-        this.$root.masterColors.splice(index,1);
+      this.$root.masterColors.splice(index,1);
       else
-        this.$root.masterColors.reverse().splice(index,1);
+      this.$root.masterColors.reverse().splice(index,1);
+      // this.resetSwatchKeys();
       this.constructSwatches(this.$root.masterColors);
     },
     resetSwatchKeys() {
-      for (var i = 0; i < this.swatchList.byTime.length; i++) {
-        var swatch = this.swatchList.byTime[i];
-      }
+      // if (!this.$root.reversed) {
+      //   for (var i = 0; i < this.swatchList.byTime.length; i++) {
+      //     var swatch = this.swatchList.byTime[i];
+      //     swatch.key = i;
+      //     var specswatch = this.swatchList.bySpectrum[i];
+      //     specswatch.key = i;
+      //   }
+      // } else {
+      //   for (var i = this.swatchList.byTime.length; i > 0; i--) {
+      //     var swatch = this.swatchList.byTime[i];
+      //     swatch.key = i;
+      //     var specswatch = this.swatchList.bySpectrum[i];
+      //     specswatch.key = i;
+      //   }
+      // }
     },
     constructSwatches(array) {
       var clone, mirror = [];
@@ -756,7 +784,7 @@ Vue.component('body-main', {
         // array = ['#ffffff', '#000000']
       }
       this.reverse = this.$root.reversed;
-      console.log(this.reverse)
+      // console.log(this.reverse)
       if (!this.reverse) {
         this.swatchList.byTime = mirror;
         this.$root.masterColors = array;
@@ -874,6 +902,9 @@ Vue.component('swatch-list', {
     isDefault: function() { 
       return this.$root.isDefault 
     },
+    isIllustrator: function() {
+      return (this.$root.activeApp == 'ILST') ? true : false;
+    }
   },
   template: `
     <div class="swatchList bbox">
@@ -887,7 +918,7 @@ Vue.component('swatch-list', {
             <div :class="prefixClass(swatch)" :style="prefixStyle(swatch)">
               <swatch-icon v-if="!isDefault" :model="swatch"></swatch-icon>
             </div>
-            <div class="swatchSuffix" :style="suffixStyle(swatch)"></div>
+            <div v-if="isIllustrator" class="swatchSuffix" :style="suffixStyle(swatch)"></div>
           </div>
           <div class="blank"></div>
           <div :class="tagClass(swatch)">
@@ -898,9 +929,7 @@ Vue.component('swatch-list', {
   `,
   methods: {
     wideStyle() {
-      var style = 'swatchMain';
-      if (this.$root.activeApp == 'PHXS')
-        style += '-phxs'
+      var style = 'swatchMain-' + this.$root.activeApp;
       return style;
     },
     hasHandle(swatch, result=false) {
@@ -918,27 +947,36 @@ Vue.component('swatch-list', {
           } else {
             csInterface.evalScript(`setDefaultStroke('${swatch.value}')`)
           }
-        } else {
+        } else if (this.$root.activeApp == 'PHXS') {
           var str = swatch.value;
           var trim = str.substring(1, 7)
           console.log(`Send ${swatch.value} as ${this.$root.activeApp} fg : ${trim}`);
           csInterface.evalScript(`setFG('${trim}')`);
+        } else if (this.$root.activeApp == 'AEFT') {
+          console.log(`What should be the default action for After Effects?`)
+          if (this.$root.hasSelection) {
+            console.log(`Assign ${swatch.value} to current selection if it has color properties`)
+          }
         }
-        if (this.$root.hasSelection)
-          console.log('Send to Illustrator');
-      } else if ((this.$root.mods.Shift) && (this.$root.activeApp == 'ILST')) {     // This would trigger on Shift and Shift + Ctrl
-        // swatch.isActive = !swatch.isActive;
-        console.log('Add to selection');
-        if (this.$root.isFillActive) {
-          if (swatch.isActive)
-            csInterface.evalScript(`addSameFill('${swatch.value}')`)
-          else
-            csInterface.evalScript(`clearSelection()`);
-        } else {
-          if (swatch.isActive)
-            csInterface.evalScript(`addSameStroke('${swatch.value}')`)
-          else
-            csInterface.evalScript(`clearSelection()`);
+        // if (this.$root.hasSelection)
+          // console.log('Send to Illustrator');
+      } else if (this.$root.mods.Shift) {
+        if (this.$root.activeApp == 'ILST') {
+          console.log('Add to selection');
+          if (this.$root.isFillActive) {
+            if (swatch.isActive)
+              csInterface.evalScript(`addSameFill('${swatch.value}')`)
+            else
+              csInterface.evalScript(`clearSelection()`);
+          } else {
+            if (swatch.isActive)
+              csInterface.evalScript(`addSameStroke('${swatch.value}')`)
+            else
+              csInterface.evalScript(`clearSelection()`);
+          }
+        } else if (this.$root.activeApp == 'AEFT') {
+          csInterface.evalScript(`startColorSelection('${swatch.value}', true)`);
+          Event.$emit('checkSelectedColors')
         }
       } else if (this.$root.mods.Ctrl) {
         if (this.$root.activeApp == 'ILST') {
@@ -958,21 +996,34 @@ Vue.component('swatch-list', {
               csInterface.evalScript(`clearSelection()`);
           }
           console.log('Select all ');
-        } else {
+        } else if (this.$root.activeApp == 'PHXS'){
           console.log(`Delete swatch #${swatch.key}`);
           Event.$emit('deleteSwatch', swatch.key)
+        } else if (this.$root.activeApp == 'AEFT') {
+          var self = this;
+          console.log(`Select all props with color values matching ${swatch.value}`)
+          csInterface.evalScript(`startColorSelection('${swatch.value}')`);
+          Event.$emit('checkSelectedColors')
+          // 
         }
       } else if (this.$root.mods.Alt) {
         if (this.$root.activeApp == 'ILST') {
           console.log(`Delete swatch #${swatch.key}`);
-          Event.$emit('deleteSwatch', swatch.key)
-        } else {
+          Event.$emit('deleteSwatch', swatch.key);
+        } else if (this.$root.activeApp == 'PHXS') {
           var str = swatch.value;
           var trim = str.substring(1, 7)
           console.log(`Send ${swatch.value} as ${this.$root.activeApp} fg : ${trim}`)
           csInterface.evalScript(`setBG('${trim}')`)
+        } else if (this.$root.activeApp == 'AEFT') {
+          console.log(`Delete swatch #${swatch.key}`);
+          Event.$emit('deleteSwatch', swatch.key);
         }
       }
+    },
+    updateAESelection() {
+      // console.log('Check for in selection');
+      // Event.$emit('checkSelectedColors');
     },
     prefixClass(swatch) {
       var str = 'swatchPrefix-'
@@ -1090,7 +1141,7 @@ Vue.component('swatch-icon', {
         } else {
           str += 'Multi'
         }
-      } else {
+      } else if (this.$root.activeApp == 'PHXS') {
         if (this.$root.isDefault) {
           str += 'Def'
         } else if ((this.$root.mods.Ctrl) && (!this.$root.mods.Shift) && (!this.$root.mods.Alt)) {
@@ -1105,6 +1156,16 @@ Vue.component('swatch-icon', {
         // } else {
         //   str += 'Multi'
         // }
+      } else if (this.$root.activeApp == 'AEFT') {
+        if (this.$root.isDefault) {
+          str += 'Def'
+        } else if ((this.$root.mods.Ctrl) && (!this.$root.mods.Shift) && (!this.$root.mods.Alt)) {
+          str += 'cursor'
+        } else if ((this.$root.mods.Shift) && (!this.$root.mods.Ctrl) && (!this.$root.mods.Alt)) {
+          str += 'plus'
+        } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (!this.$root.mods.Ctrl)) {
+          str += 'cancel'
+        }
       }
       return str;
     }
@@ -1163,7 +1224,6 @@ var app = new Vue({
         { id: "sortbytime", label: "Time", enabled: true, checkable: true, checked: true, ingroup: false},
         { id: "sortbyspectrum", label: "Spectrum", enabled: true, checkable: true, checked: false, ingroup: false},
         { label: "---" },
-
         {
           id: "swatchsize", label: "Swatch size", menu: [
             { id: "large", label: "Large", enabled: true, checkable: true, checked: true, ingroup: true},
@@ -1211,10 +1271,12 @@ var app = new Vue({
     this.setCSSHeight();
     if ((!this.persistent) && (this.activeApp == 'ILST'))
       this.getAllAIColors();
+    else if ((!this.persistent) && (this.activeApp == 'AEFT'))
+      this.getAllAEColors();
     else
       Event.$emit('persistentLaunch', self.masterColors)
     Event.$on('modsUpdate', self.parseModifiers);
-    Event.$on('checkSelectedColors', self.getSelectedAIColors);
+    Event.$on('checkSelectedColors', self.getSelectedColors);
     Event.$on('scanAllAIColors', self.getAllAIColors);
     Event.$on('scanAllPSColors', self.getAllPSColors);
     Event.$on('updateSessionColors', self.updateSessionColors);
@@ -1236,61 +1298,72 @@ var app = new Vue({
       this.updateStorage();
     },
     findTheme(appSkin) {
-      if (toHex(appSkin.panelBackgroundColor.color) == '#f0f0f0') {
-        this.activeTheme = 'lightest';
-        if (this.$root.activeApp == 'ILST') {
-          this.setCSS('color-scroll', '#fbfbfb');
-          this.setCSS('color-scroll-thumb', '#dcdcdc');
-          this.setCSS('color-scroll-thumb-hover', '#a6a6a6');
-        } else {
-          this.setCSS('color-scroll', '#e3e3e3');
-          this.setCSS('color-scroll-thumb', '#bdbdbd');
-          this.setCSS('color-scroll-thumb-hover', '#bdbdbd');
+      // AE uses smooth gradients. Isolate the others apps from it
+      if ((this.$root.activeApp == 'ILST') || (this.$root.activeApp == 'PHXS')) {
+        if (toHex(appSkin.panelBackgroundColor.color) == '#f0f0f0') {
+          this.activeTheme = 'lightest';
+          if (this.$root.activeApp == 'ILST') {
+            this.setCSS('color-scroll', '#fbfbfb');
+            this.setCSS('color-scroll-thumb', '#dcdcdc');
+            this.setCSS('color-scroll-thumb-hover', '#a6a6a6');
+          } else if (this.$root.activeApp == 'PHXS') {
+            this.setCSS('color-scroll', '#e3e3e3');
+            this.setCSS('color-scroll-thumb', '#bdbdbd');
+            this.setCSS('color-scroll-thumb-hover', '#bdbdbd');
+          }
+        } else if (toHex(appSkin.panelBackgroundColor.color) == '#b8b8b8') {
+          this.activeTheme = 'light';
+          if (this.$root.activeApp == 'ILST') {
+            this.setCSS('color-scroll', '#c4c4c4');
+            this.setCSS('color-scroll-thumb', '#a8a8a8');
+            this.setCSS('color-scroll-thumb-hover', '#7b7b7b');
+          } else if (this.$root.activeApp == 'PHXS') {
+            this.setCSS('color-scroll', '#ababab');
+            this.setCSS('color-scroll-thumb', '#858585');
+            this.setCSS('color-scroll-thumb-hover', '#858585');
+          }
+        } else if (toHex(appSkin.panelBackgroundColor.color) == '#535353') {
+          this.activeTheme = 'dark';
+          if (this.$root.activeApp == 'ILST') {
+            this.setCSS('color-scroll', '#4b4b4b');
+            this.setCSS('color-scroll-thumb', '#606060');
+            this.setCSS('color-scroll-thumb-hover', '#747474');
+          } else if (this.$root.activeApp == 'PHXS') {
+            this.setCSS('color-scroll', '#4a4a4a');
+            this.setCSS('color-scroll-thumb', '#696969');
+            this.setCSS('color-scroll-thumb-hover', '#696969');
+          }
+        } else if (toHex(appSkin.panelBackgroundColor.color) == '#323232') {
+          this.activeTheme = 'darkest';
+          if (this.$root.activeApp == 'ILST') {
+            this.setCSS('color-scroll', '#2a2a2a');
+            this.setCSS('color-scroll-thumb', '#383838');
+            this.setCSS('color-scroll-thumb-hover', '#525252');
+          } else if (this.$root.activeApp == 'PHXS') {
+            this.setCSS('color-scroll', '#292929');
+            this.setCSS('color-scroll-thumb', '#474747');
+            this.setCSS('color-scroll-thumb-hover', '#474747');
+          }
         }
-      } else if (toHex(appSkin.panelBackgroundColor.color) == '#b8b8b8') {
-        this.activeTheme = 'light';
+        this.setCSS('color-bg', toHex(appSkin.panelBackgroundColor.color));
+        this.setCSS('color-ui-hover', this.$root.getCSS('color-scroll'));
         if (this.$root.activeApp == 'ILST') {
-          this.setCSS('color-scroll', '#c4c4c4');
-          this.setCSS('color-scroll-thumb', '#a8a8a8');
-          this.setCSS('color-scroll-thumb-hover', '#7b7b7b');
+          this.setCSS('scroll-radius', '20px');
+          this.setCSS('thumb-radius', '10px');
         } else {
-          this.setCSS('color-scroll', '#ababab');
-          this.setCSS('color-scroll-thumb', '#858585');
-          this.setCSS('color-scroll-thumb-hover', '#858585');
-        }
-      } else if (toHex(appSkin.panelBackgroundColor.color) == '#535353') {
-        this.activeTheme = 'dark';
-        if (this.$root.activeApp == 'ILST') {
-          this.setCSS('color-scroll', '#4b4b4b');
-          this.setCSS('color-scroll-thumb', '#606060');
-          this.setCSS('color-scroll-thumb-hover', '#747474');
-        } else {
-          this.setCSS('color-scroll', '#4a4a4a');
-          this.setCSS('color-scroll-thumb', '#696969');
-          this.setCSS('color-scroll-thumb-hover', '#696969');
-        }
-      } else if (toHex(appSkin.panelBackgroundColor.color) == '#323232') {
-        this.activeTheme = 'darkest';
-        if (this.$root.activeApp == 'ILST') {
-          this.setCSS('color-scroll', '#2a2a2a');
-          this.setCSS('color-scroll-thumb', '#383838');
-          this.setCSS('color-scroll-thumb-hover', '#525252');
-        } else {
-          this.setCSS('color-scroll', '#292929');
-          this.setCSS('color-scroll-thumb', '#474747');
-          this.setCSS('color-scroll-thumb-hover', '#474747');
+          this.setCSS('scroll-radius', '1px');
+          this.setCSS('thumb-width', '8px');
         }
       } else {
-        console.log('Theme is not recognized')
-      }
-      this.setCSS('color-bg', toHex(appSkin.panelBackgroundColor.color));
-      this.setCSS('color-ui-hover', this.$root.getCSS('color-scroll'));
-      if (this.$root.activeApp == 'ILST') {
+        console.log('This is an After Effects theme');
+        this.activeTheme = 'afterFX';
+        this.setCSS('color-bg', toHex(appSkin.panelBackgroundColor.color));
+        this.setCSS('color-ui-hover', toHex(appSkin.panelBackgroundColor.color, -10));
+        this.setCSS('color-scroll', toHex(appSkin.panelBackgroundColor.color, -20));
+        this.setCSS('color-scroll-thumb', toHex(appSkin.panelBackgroundColor.color));
+        this.setCSS('color-scroll-thumb-hover', toHex(appSkin.panelBackgroundColor.color, 10));
         this.setCSS('scroll-radius', '20px');
-        this.setCSS('thumb-radius', '10px');
-      } else {
-        this.setCSS('scroll-radius', '1px');
-        this.setCSS('thumb-width', '8px');
+        this.setCSS('thumb-width', '10px');
       }
     },
     updateSessionColors() {
@@ -1299,14 +1372,19 @@ var app = new Vue({
     },
     updateStorage() {
       var storage = window.localStorage, self = this;
-      console.log('Updating local storage...');
+      // console.log('...');
       storage.setItem('contextmenu', JSON.stringify(self.context.menu));
       storage.setItem('sessionColors', JSON.stringify(self.masterColors));
       storage.setItem('persistent', JSON.stringify(self.persistent));
       storage.setItem('theme', self.activeTheme);
       storage.setItem('appName', self.activeApp);
       storage.setItem('reversed', JSON.stringify(self.reversed));
-      console.log(storage.reversed)
+      console.log(`Updating local storage:
+        Colors: ${this.masterColors.join(', ')}
+        Persistent: ${this.persistent}
+        SortBy: ${this.sortBy}
+        Theme: ${this.activeTheme}
+        Reversed: ${this.reversed}`)
     },
     readStorage() {
       var storage = window.localStorage;
@@ -1328,10 +1406,18 @@ var app = new Vue({
         this.reversed = JSON.parse(storage.getItem('reversed'))
         // this.reversed = false;
       }
-      // if (this.activeApp == 'PHXS')
+      if (this.activeApp == 'AEFT') {
+        // console.log(window)
+        // this.context.menu.pop();
+        // this.context.menu.push({id: "test", label: "Test", enabled: true, checkable: false, checked: false, ingroup: false})
+      }
       //   this.masterColors = ['#ff0000', '#0000ff']
+      this.checkSort();
       console.log(storage);
       // console.log(this.persistent);
+    },
+    checkSort() {
+      return this.sortBy = (this.context.menu[7].checked) ? 'Spectrum' : 'Time';
     },
     readConfigFromStorage() {
       console.log('Reading prior persistence');
@@ -1386,7 +1472,7 @@ var app = new Vue({
       return mirror;
     },
     checkForMultipleAppearances(msg) {
-      var mirror = [], clone, result = false, fills = [], strokes = [];
+      var fills = [], strokes = [];
       for (var i = 0; i < msg.length; i++) {
         for (let [key, value] of Object.entries(msg[i])) {
           if ((key == 'fill') && (!fills.includes(value)))
@@ -1407,41 +1493,77 @@ var app = new Vue({
         Event.$emit('updateFS_MultiStroke', false)
       return msg;
     },
-    updateSelectedAIColors(msg) {
-      if (/\,/.test(msg))
-        msg = JSON.parse(msg);
-      this.checkForMultipleAppearances(msg);
+    updateInSelectionColors(msg) {
+      if (/\,/.test(msg)) {
+        try {
+          msg = JSON.parse(msg);
+        } catch(err) {
+          msg = msg.split(',')
+        }
+      }
+      if (/^\#\w{6}$/.test(msg)) {
+        msg = [msg]
+      }
+      console.log(msg)
+      // else if (/\#/.test(msg))
+      if (this.$root.activeApp == 'ILST') {
+        this.checkForMultipleAppearances(msg);
+      }
       Event.$emit('updateSelectedColors', msg);
     },
-    getSelectedAIColors(msg) {
+    getSelectedColors(msg='') {
+      console.log(msg)
       var self = this;
-      if (this.activeApp == 'ILST')
-        csInterface.evalScript(`scanSelectedColors('${msg}')`, self.updateSelectedAIColors)
+      if (this.activeApp == 'ILST') {
+        csInterface.evalScript(`scanSelectedColors('${msg}')`, self.updateInSelectionColors);
+      } else {
+        csInterface.evalScript(`scanSelectionforColors()`, self.updateInSelectionColors);
+      }
+    },
+    getAllAEColors() {
+      var self = this;
+      console.log('Requesting all AE colors');
+      if (this.activeApp == 'AEFT')
+        csInterface.evalScript(`scanAllColors()`, self.readAllAEColors);
+    },
+    readAllAEColors(msg) {
+      console.log('Receiving all colors');
+      if (/\,/.test(msg)) {
+        msg = msg.split(',');
+        msg = this.removeDuplicatesInArray(msg);
+        msg = this.removeEmptyValues(msg);
+      } else {
+        msg = [msg]
+      }
+      console.log(msg)
+      Event.$emit('constructSwatches', msg);
     },
     getAllAIColors() {
       var self = this;
       console.log('Requesting all colors');
       if (this.activeApp == 'ILST')
-        csInterface.evalScript(`scanAllColors()`, self.readAllAIColors)
+        csInterface.evalScript(`scanAllColors()`, self.readAllAIColors);
     },
     getAllPSColors() {
       var self = this;
       console.log('Requesting all colors');
       if (this.activeApp == 'PHXS')
-        csInterface.evalScript(`scanAllColors()`, self.readAllPSColors)
+        csInterface.evalScript(`scanAllColors()`, self.readAllPSColors);
+      else if (this.activeApp == 'AEFT')
+        this.getAllAEColors();
     },
     readAllAIColors(msg) {
       console.log('Receiving all colors');
       if (/\,/.test(msg))
         msg = JSON.parse(msg);
-      Event.$emit('constructSwatches', msg)
+      Event.$emit('constructSwatches', msg);
     },
     readAllPSColors(msg) {
       console.log('Receiving all colors');
       if (/\,/.test(msg))
         msg = msg.split(',')
-      console.log(msg)  
-      Event.$emit('constructSwatchesPS', msg)
+      console.log(msg);
+      Event.$emit('constructSwatchesPS', msg);
     },
     wake() {
       this.isWake = true;
@@ -1469,9 +1591,16 @@ var app = new Vue({
       }
     },
     handleResize(evt) {
-      this.panelWidth = document.documentElement.clientWidth;
-      this.panelHeight = document.documentElement.clientHeight;
-      this.setCSSHeight();
+      if (this.$root.activeApp == 'AEFT') {
+        // console.log(`w: ${this.panelWidth}, h: ${this.panelHeight}`);
+        this.panelHeight = document.documentElement.clientHeight;
+        this.setCSSHeight();
+        console.log(evt);
+      } else {
+        this.panelWidth = document.documentElement.clientWidth;
+        this.panelHeight = document.documentElement.clientHeight;
+        this.setCSSHeight();
+      }
     },
     flushModifiers() {
       this.mods.Ctrl = false;
@@ -1553,6 +1682,10 @@ var app = new Vue({
     contextMenuClicked(id) {
       var target = this.findMenuItemById(id);
       var parent = this.findMenuItemParentById(id);
+      if (id == 'test') {
+        console.log('Trying to resize')
+        csInterface.resizeContent(30, 200);
+      }
       console.log(`Clicked on ${target.label} with check: ${target.checked}`);
       if ((target.checkable) && (target.ingroup) && (!target.checked)) {
         // console.log('this is currently ' + target.checked);
@@ -1575,13 +1708,13 @@ var app = new Vue({
       // This is a mess
       if (id == 'allcolors') {
         // this.getAllAIColors();
-        console.log('Resetting colors via event')
-        Event.$emit('resetColors')
+        console.log('Resetting colors via event');
+        Event.$emit('resetColors');
       } else if (id == 'persistent') {
         this.persistent = !this.persistent;
         target.checked = !target.checked;
-        console.log(this.persistent);
-        console.log(target);
+        // console.log(this.persistent);
+        // console.log(target);
         // console.log('Hello');
       }
       if (id == 'scanselection') {
@@ -1610,6 +1743,7 @@ var app = new Vue({
           this.context.menu[7].checked = toggle;
           csInterface.updateContextMenuItem('sortbyspectrum', true, toggle);
           Event.$emit('setSortByTime', true);
+          this.sortBy = 'Time';
         // } else if (target.checked) {
         //   console.log('Not default sort');
         } else {
@@ -1627,6 +1761,7 @@ var app = new Vue({
           this.context.menu[6].checked = toggle;
           csInterface.updateContextMenuItem('sortbytime', true, toggle);
           Event.$emit('setSortBySpectrum', true);
+          this.sortBy = 'Spectrum';
         // } else if (target.checked) {
         //   console.log('Not default sort');
         } else {
@@ -1652,16 +1787,34 @@ var app = new Vue({
         result = true;
       return result;
     },
+    removeEmptyValues(keyList, mirror = []) {
+      // console.log(keyList);
+      for (var i = 0; i < keyList.length; i++) {
+        var targ = keyList[i];
+        if ((/\s/.test(targ)) || (targ.length < 6)) {
+          // console.log('Empty');
+        } else {
+          mirror.push(targ);
+        }
+      }
+      return mirror;
+    },
     removeDuplicatesInArray(keyList) {
-      var uniq = keyList
-      .map((name) => {
-        return {count: 1, name: name}
-      })
-      .reduce((a, b) => {
-        a[b.name] = (a[b.name] || 0) + b.count
-        return a
-      }, {})
-      return sorted = Object.keys(uniq).sort((a, b) => uniq[a] < uniq[b])
+      try {
+        var uniq = keyList
+        .map((name) => {
+          return {count: 1, name: name}
+        })
+        .reduce((a, b) => {
+          a[b.name] = (a[b.name] || 0) + b.count
+          return a
+        }, {})
+        var sorted = Object.keys(uniq).sort((a, b) => uniq[a] < uniq[b])
+      } catch(err) {
+        sorted = keyList
+      } finally {
+        return sorted;
+      }
     },
     getCSS(prop) {
       return window.getComputedStyle(document.documentElement).getPropertyValue('--' + prop);

@@ -1,5 +1,4 @@
 var exist = app.documents.length > 0;
-// something
 
 function scanSelection() {
   var doc = app.documents[0];

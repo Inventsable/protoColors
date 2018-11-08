@@ -344,7 +344,8 @@ svg {width: 100%;}
   display: grid;
 }
 .swatch-idle-ILST {
-  grid-template-columns: 5fr .5fr 1fr;
+  /* grid-template-columns: 5fr .5fr 1fr; */
+    grid-template-columns: 5fr 0fr 0fr;
 }
 .swatch-idle-PHXS {
   grid-template-columns: 5fr 0fr 0fr;

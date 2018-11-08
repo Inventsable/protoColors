@@ -107,7 +107,7 @@ Vue.component('selection-colors', {
         Event.$emit('checkSelectedColors', array)
       } else {
         this.$root.hasSelection = false;
-        if (this.$root.activeApp == 'ILST') {
+        if (this.$root.activeApp == 'ILST'||'PHXS') {
           Event.$emit('recheckFillStroke')
         }
         this.clearSelection();
@@ -422,9 +422,15 @@ Vue.component('fill-stroke', {
         str = 'fill: red'
       return str;
     },
+    doubleCheckFillStroke() {
+      var self = this;
+      if (this.$root.activeApp == 'ILST')
+        csInterface.evalScript(`scanFillStroke()`, self.$root.fillstrokeRead)
+    }
   },
   mounted() {
     var self = this;
+    this.doubleCheckFillStroke();
     Event.$on('updateFillStroke', self.setFillStroke);
     Event.$on('updateFS_MultiFill', self.setMultiFill);
     Event.$on('updateFS_MultiStroke', self.setMultiStroke);
@@ -518,34 +524,6 @@ Vue.component('mod-keys', {
   },
   computed: {
     isDefault: function() {return this.$root.isDefault},
-    CtrlShift: function() {
-      if ((this.Ctrl) && (this.Shift)) {
-        return true;
-      } else {
-        return false;
-      }
-    },
-    CtrlAlt: function() {
-      if ((this.Ctrl) && (this.Alt)) {
-        return true;
-      } else {
-        return false;
-      }
-    },
-    ShiftAlt: function() {
-      if ((this.Shift) && (this.Alt)) {
-        return true;
-      } else {
-        return false;
-      }
-    },
-    CtrlShiftAlt: function() {
-      if ((this.Ctrl) && (this.Shift) && (this.Alt)) {
-        return true;
-      } else {
-        return false;
-      }
-    },
   },
 })
 
@@ -637,10 +615,10 @@ Vue.component('body-main', {
   methods: {
     // Persistent reverse does not work
     checkReverse() {
-      // if (this.$root.reversed)
-      // console.log(`${this.reverse} : ${this.$root.reversed}`)
-      // if (!this.reverse)
-      //   this.toggleReverse();
+      if (this.$root.reversed)
+      console.log(`${this.reverse} : ${this.$root.reversed}`)
+      if (this.$root.reversed !== this.reverse)
+        this.toggleReverse();
     },
     resetColors() {
       if (this.$root.activeApp == 'ILST') { 
@@ -651,7 +629,7 @@ Vue.component('body-main', {
       }
     },
     toggleReverse() {
-      this.reverse = !this.reverse;
+      this.reverse = this.$root.reversed;
       this.clearSwatchesStatus();
       this.swatchList.byTime = this.swatchList.byTime.reverse();
       this.swatchList.bySpectrum = this.swatchList.bySpectrum.reverse();
@@ -720,13 +698,12 @@ Vue.component('body-main', {
       this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
       Event.$emit('updateSessionColors');
     },
-    deleteSwatch(index) {
+    deleteSwatch(value) {
       var self = this;
-      if (!this.reverse)
-      this.$root.masterColors.splice(index,1);
-      else
-      this.$root.masterColors.reverse().splice(index,1);
-      // this.resetSwatchKeys();
+      for (var i = 0; i < this.$root.masterColors.length; i++) {
+        if (this.$root.masterColors[i] == value)
+          this.$root.masterColors.splice(i,1);
+      }
       this.constructSwatches(this.$root.masterColors);
     },
     resetSwatchKeys() {
@@ -747,6 +724,7 @@ Vue.component('body-main', {
       // }
     },
     constructSwatches(array) {
+      // console.log(array)
       var clone, mirror = [];
       if (array.length > 0) {
         for (var i = 0; i < array.length; i++) {
@@ -783,20 +761,21 @@ Vue.component('body-main', {
         // mirror = [white, black];
         // array = ['#ffffff', '#000000']
       }
-      this.reverse = this.$root.reversed;
+      // this.reverse = this.$root.reversed;
       // console.log(this.reverse)
-      if (!this.reverse) {
+
+      // @@ ERROR - Refreshing when Storage:Reversed causes never-ending toggling of Reverse
+      // if (!this.$root.reversed) {
         this.swatchList.byTime = mirror;
         this.$root.masterColors = array;
         var spectrum = this.sortInSpectrum(true);
         this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
-      } else {
-        // console.log(`Why aren't you switching on load?`)
-        this.swatchList.byTime = mirror.reverse();
-        this.$root.masterColors = array.reverse();
-        var spectrum = this.sortInSpectrum(true);
-        this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum.reverse());
-      }
+      // } else {
+      //   this.swatchList.byTime = mirror;
+      //   this.$root.masterColors = array.reverse();
+      //   var spectrum = this.sortInSpectrum(true);
+      //   this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum.reverse());
+      // }
       Event.$emit('updateSessionColors');
       this.total = mirror.length;
       Event.$emit('recheckReverse');
@@ -845,11 +824,14 @@ Vue.component('body-main', {
       }
     },
     clearSwatchesHover(except) {
-      var which = this.sorted
-      var target = this.swatchList[which];
-      for (var i = 0; i < target.length; i++) {
-        target[i].isHover = false;
-        target[i].showPrefix = false;
+      // var which = this.sorted
+      var time = this.swatchList.byTime;
+      var spec = this.swatchList.bySpectrum;
+      for (var i = 0; i < time.length; i++) {
+        time[i].isHover = false;
+        time[i].showPrefix = false;
+        spec[i].isHover = false;
+        spec[i].showPrefix = false;
       }
     },
     sortInSpectrum(forward=true) {
@@ -898,13 +880,18 @@ Vue.component('swatch-list', {
   props: {
     model: Array,
   },
+  data() {
+    return {
+      hasActive: false,
+    }
+  },
   computed: {
     isDefault: function() { 
       return this.$root.isDefault 
     },
     isIllustrator: function() {
       return (this.$root.activeApp == 'ILST') ? true : false;
-    }
+    },
   },
   template: `
     <div class="swatchList bbox">
@@ -918,7 +905,7 @@ Vue.component('swatch-list', {
             <div :class="prefixClass(swatch)" :style="prefixStyle(swatch)">
               <swatch-icon v-if="!isDefault" :model="swatch"></swatch-icon>
             </div>
-            <div v-if="isIllustrator" class="swatchSuffix" :style="suffixStyle(swatch)"></div>
+            <div v-if="hasActive" class="swatchSuffix" :style="suffixStyle(swatch)"></div>
           </div>
           <div class="blank"></div>
           <div :class="tagClass(swatch)">
@@ -997,8 +984,7 @@ Vue.component('swatch-list', {
           }
           console.log('Select all ');
         } else if (this.$root.activeApp == 'PHXS'){
-          console.log(`Delete swatch #${swatch.key}`);
-          Event.$emit('deleteSwatch', swatch.key)
+          Event.$emit('deleteSwatch', swatch.value)
         } else if (this.$root.activeApp == 'AEFT') {
           var self = this;
           console.log(`Select all props with color values matching ${swatch.value}`)
@@ -1008,16 +994,14 @@ Vue.component('swatch-list', {
         }
       } else if (this.$root.mods.Alt) {
         if (this.$root.activeApp == 'ILST') {
-          console.log(`Delete swatch #${swatch.key}`);
-          Event.$emit('deleteSwatch', swatch.key);
+          Event.$emit('deleteSwatch', swatch.value);
         } else if (this.$root.activeApp == 'PHXS') {
           var str = swatch.value;
           var trim = str.substring(1, 7)
           console.log(`Send ${swatch.value} as ${this.$root.activeApp} fg : ${trim}`)
           csInterface.evalScript(`setBG('${trim}')`)
         } else if (this.$root.activeApp == 'AEFT') {
-          console.log(`Delete swatch #${swatch.key}`);
-          Event.$emit('deleteSwatch', swatch.key);
+          Event.$emit('deleteSwatch', swatch.value);
         }
       }
     },
@@ -1032,8 +1016,15 @@ Vue.component('swatch-list', {
     },
     prefixStyle(swatch) {
       var str = ''
-      if ((!this.$root.isDefault) && (swatch.isHover)) {
-        str = 'width: 50%;opacity:1;';
+      if (swatch.isHover) {
+        if ((this.$root.CtrlOnly) || (this.$root.ShiftOnly) || (this.$root.AltOnly))
+          str = 'width: 50%;opacity:1;';
+        // if ((this.$root.activeApp == 'PHXS') && (this.$root.AltOnly))
+        //   str = 'width: 50%;opacity:1;';
+        // if ((this.$root.activeApp == 'AEFT') && ((this.$root.CtrlOnly) || (this.$root.ShiftOnly) || (this.$root.AltOnly)))
+        //   str = 'width: 50%;opacity:1;';
+        else
+          str = 'width: 0%;opacity:0;';
       } else {
         str = 'width: 0%;opacity:0;';
       }
@@ -1056,15 +1047,15 @@ Vue.component('swatch-list', {
         str += 'idle'
       return str;
     },
-    tagStyle(swatch) {
-      // var bg = 'background-color: #323232'
-      // var wCond = '0px', cCond = 'transparent';
-      // var border = `border-width:${wCond}`;
-      // var bcolor = `border-color:${cCond}`;
-      //
-      // var style = `${bg};${border};${bcolor};border-style: solid;`;
-      return bg;
-    },
+    // tagStyle(swatch) {
+    //   var bg = 'background-color: #323232'
+    //   // var wCond = '0px', cCond = 'transparent';
+    //   // var border = `border-width:${wCond}`;
+    //   // var bcolor = `border-color:${cCond}`;
+    //   //
+    //   // var style = `${bg};${border};${bcolor};border-style: solid;`;
+    //   return bg;
+    // },
     getSwatchClass(swatch) {
       var str = 'swatch-'
       if (swatch.isActive)
@@ -1260,8 +1251,54 @@ var app = new Vue({
         result = false;
       return result;
     },
+    CtrlShift: function() {
+      if ((this.mods.Ctrl) && (this.mods.Shift)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    CtrlAlt: function() {
+      if ((this.mods.Ctrl) && (this.mods.Alt)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    ShiftAlt: function() {
+      if ((this.mods.Shift) && (this.mods.Alt)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    CtrlShiftAlt: function() {
+      if ((this.mods.Ctrl) && (this.mods.Shift) && (this.mods.Alt)) {
+        return true;
+      } else {
+        return false;
+      }
+    },
+    CtrlOnly: function() {
+      if ((this.mods.Ctrl) && (!this.mods.Shift) && (!this.mods.Alt))
+        return true;
+      else
+        return false;
+    },
+    ShiftOnly: function() {
+      if ((!this.mods.Ctrl) && (this.mods.Shift) && (!this.mods.Alt))
+        return true;
+      else
+        return false;
+    },
+    AltOnly: function() {
+      if ((!this.mods.Ctrl) && (!this.mods.Shift) && (this.mods.Alt))
+        return true;
+      else
+        return false;
+    },
   },
-  mounted: function () {
+  mounted() {
     var self = this;
     if (navigator.platform.indexOf('Win') > -1) { this.macOS = false; } else if (navigator.platform.indexOf('Mac') > -1) { this.macOS = true; }
     this.readStorage();
@@ -1288,7 +1325,8 @@ var app = new Vue({
   },
   methods: {
     setReverse(state) {
-      this.reversed = state;
+      // This is redundant
+      // this.reversed = state;
       this.updateStorage();
     },
     appThemeChanged(event) {
@@ -1372,7 +1410,6 @@ var app = new Vue({
     },
     updateStorage() {
       var storage = window.localStorage, self = this;
-      // console.log('...');
       storage.setItem('contextmenu', JSON.stringify(self.context.menu));
       storage.setItem('sessionColors', JSON.stringify(self.masterColors));
       storage.setItem('persistent', JSON.stringify(self.persistent));
@@ -1435,31 +1472,45 @@ var app = new Vue({
       }
       this.masterColors = clean;
     },
+    // Changing this should result in passive fill/stroke scanning
     checkForNewColors(msg) {
       this.cleanMasterColors();
-      var stroke = msg.stroke.color, fill = msg.fill.color, local, err = 0, valid = true;
-      if (msg.fill.active)
-        local = fill;
-      else
-        local = stroke;
-      if (/white/.test(local))
-        valid = false;
-        // local = '#ffffff'
-      if (valid) {
-        for (var i = 0; i < this.masterColors.length; i++) {
-          if (local !== this.masterColors[i]) {
-            // console.log(`${local} !== ${this.masterColors[i]}`);
-            err++;
-          }
+      var stroke = msg.stroke.color, fill = msg.fill.color, local, errF = 0, errS = 0, valid = true;
+      var totals = this.masterColors.length;
+      // if (msg.fill.active)
+      //   local = fill;
+      // else
+      //   local = stroke;
+      // local = '#ffffff'
+      if (!/white/.test(fill)) {
+        for (var i = 0; i < totals; i++) {
+          if (fill !== this.masterColors[i])
+            errF++;
         }
-        // console.log(`${local} : ${err} : ${this.masterColors.length}`);
-        if (err == this.masterColors.length) {
-          this.masterColors.unshift(local);
-          Event.$emit('addNewSwatch', local)
-        }
-        if (!this.hasSelection)
-          Event.$emit('clearSwatchesActive', -1);
       }
+      if (!/white/.test(stroke)) {
+        for (var i = 0; i < totals; i++) {
+          if (stroke !== this.masterColors[i])
+            errS++;
+        }
+        // console.log(`${local} : ${errF} : ${totals}`);
+      }
+      if (errF == totals) {
+        if (!this.reversed)
+          this.masterColors.unshift(fill);
+        else
+          this.masterColors.push(fill)
+        Event.$emit('addNewSwatch', fill)
+      }
+      if (errS == totals) {
+        if (!this.reversed)
+          this.masterColors.unshift(stroke);
+        else
+          this.masterColors.push(stroke)
+        Event.$emit('addNewSwatch', stroke)
+      }
+      if (!this.hasSelection)
+        Event.$emit('clearSwatchesActive', -1);
       console.log(this.masterColors);
       Event.$emit('updateStorage');
     },
@@ -1702,6 +1753,7 @@ var app = new Vue({
         location.reload();
       }
       if (id == 'reverse') {
+        this.reversed = !this.reversed;
         Event.$emit('reverseCurrentSwatches');
       }
 
@@ -1771,6 +1823,9 @@ var app = new Vue({
         }
       }
 
+      if ((/sortby/.test(id)) || (/reverse/.test(id))) {
+        Event.$emit('swatchClearHoverEvt');
+      }
       this.updateStorage();
       // this.setContextMenu();
     },

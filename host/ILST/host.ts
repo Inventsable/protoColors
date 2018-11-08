@@ -153,6 +153,8 @@ function scanSelectedColors(arrs) {
   return JSON.stringify(result);
 }
 
+
+
 function scanAllColors() {
   var result = [], doc = app.documents[0];
   for (var i = 0; i < doc.pageItems.length; i++) {

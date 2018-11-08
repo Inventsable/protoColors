@@ -1016,13 +1016,19 @@ Vue.component('swatch-list', {
     },
     prefixStyle(swatch) {
       var str = ''
-      if (swatch.isHover) {
+      if ((swatch.isHover) && (this.$root.activeApp == 'ILST')) {
         if ((this.$root.CtrlOnly) || (this.$root.ShiftOnly) || (this.$root.AltOnly))
           str = 'width: 50%;opacity:1;';
-        // if ((this.$root.activeApp == 'PHXS') && (this.$root.AltOnly))
-        //   str = 'width: 50%;opacity:1;';
-        // if ((this.$root.activeApp == 'AEFT') && ((this.$root.CtrlOnly) || (this.$root.ShiftOnly) || (this.$root.AltOnly)))
-        //   str = 'width: 50%;opacity:1;';
+        else
+          str = 'width: 0%;opacity:0;';
+      } else if ((swatch.isHover) && (this.$root.activeApp == 'PHXS')) {
+        if (this.$root.AltOnly)
+          str = 'width: 50%;opacity:1;';
+        else
+          str = 'width: 0%;opacity:0;';
+      } else if ((swatch.isHover) && (this.$root.activeApp == 'AEFT')) {
+        if ((this.$root.CtrlOnly) || (this.$root.ShiftOnly))
+          str = 'width: 50%;opacity:1;';
         else
           str = 'width: 0%;opacity:0;';
       } else {

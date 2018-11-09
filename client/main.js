@@ -655,8 +655,6 @@ Vue.component('body-main', {
       this.constructSwatches(uniques);
     },
     readAllSwatchesPS(msg) {
-      // var uniques = this.getUniqueColors(msg);
-      // console.log(uniques);
       this.constructSwatches(msg);
     },
     readAltList(array) {
@@ -704,78 +702,44 @@ Vue.component('body-main', {
         if (this.$root.masterColors[i] == value)
           this.$root.masterColors.splice(i,1);
       }
-      this.constructSwatches(this.$root.masterColors);
+      // if (!this.$root.reversed)
+        this.constructSwatches(this.$root.masterColors, true);
+      // else
+        // this.constructSwatches(this.$root.masterColors.reverse());
     },
-    resetSwatchKeys() {
-      // if (!this.$root.reversed) {
-      //   for (var i = 0; i < this.swatchList.byTime.length; i++) {
-      //     var swatch = this.swatchList.byTime[i];
-      //     swatch.key = i;
-      //     var specswatch = this.swatchList.bySpectrum[i];
-      //     specswatch.key = i;
-      //   }
-      // } else {
-      //   for (var i = this.swatchList.byTime.length; i > 0; i--) {
-      //     var swatch = this.swatchList.byTime[i];
-      //     swatch.key = i;
-      //     var specswatch = this.swatchList.bySpectrum[i];
-      //     specswatch.key = i;
-      //   }
-      // }
-    },
-    constructSwatches(array) {
-      // console.log(array)
-      var clone, mirror = [];
-      if (array.length > 0) {
-        for (var i = 0; i < array.length; i++) {
-          clone = {
-            key: i,
-            value: array[i],
-            showPrefix: false,
-            isActive: false,
-            isHover: false,
-            isFind: false,
-            isReplace: false,
-          }
-          mirror.push(clone);
+    constructSwatches(array, isAlt=false) {
+      var clone, mirror = [], spectrum;
+      for (var i = 0; i < array.length; i++) {
+        clone = {
+          key: i,
+          value: array[i],
+          showPrefix: false,
+          isActive: false,
+          isHover: false,
+          isFind: false,
+          isReplace: false,
+        }
+        mirror.push(clone);
+      }
+      // @@ BUG - This is a bad way to reverse, a lot of issues from below. Just .reverse() source next time, no need for if(reversed)
+      if (isAlt) {
+        if (!this.$root.reversed) {
+          this.swatchList.byTime = mirror;
+          this.$root.masterColors = array;
+          spectrum = this.sortInSpectrum(true);
+          this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
+        } else {
+          this.swatchList.byTime = mirror;
+          this.$root.masterColors = array.reverse();
+          spectrum = this.sortInSpectrum(true);
+          this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum.reverse());
         }
       } else {
-        var white = {
-          key: 0,
-          value: '#ffffff',
-          showPrefix: false,
-          isActive: false,
-          isHover: false,
-          isFind: false,
-          isReplace: false,
-        }
-        var black = {
-          key: 1,
-          value: '#000000',
-          showPrefix: false,
-          isActive: false,
-          isHover: false,
-          isFind: false,
-          isReplace: false,
-        }
-        // mirror = [white, black];
-        // array = ['#ffffff', '#000000']
-      }
-      // this.reverse = this.$root.reversed;
-      // console.log(this.reverse)
-
-      // @@ ERROR - Refreshing when Storage:Reversed causes never-ending toggling of Reverse
-      // if (!this.$root.reversed) {
         this.swatchList.byTime = mirror;
         this.$root.masterColors = array;
-        var spectrum = this.sortInSpectrum(true);
+        spectrum = this.sortInSpectrum(true);
         this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum);
-      // } else {
-      //   this.swatchList.byTime = mirror;
-      //   this.$root.masterColors = array.reverse();
-      //   var spectrum = this.sortInSpectrum(true);
-      //   this.swatchList.bySpectrum = this.constructSpectrumSwatches(spectrum.reverse());
-      // }
+      }
       Event.$emit('updateSessionColors');
       this.total = mirror.length;
       Event.$emit('recheckReverse');
@@ -824,7 +788,6 @@ Vue.component('body-main', {
       }
     },
     clearSwatchesHover(except) {
-      // var which = this.sorted
       var time = this.swatchList.byTime;
       var spec = this.swatchList.bySpectrum;
       for (var i = 0; i < time.length; i++) {
@@ -835,9 +798,7 @@ Vue.component('body-main', {
       }
     },
     sortInSpectrum(forward=true) {
-      // This is stacking errors on jaistlyn's file
       var self = this;
-      // console.log("Sorting: " + colorHistory);
       var n = [];
       for (var index = 0; index < this.$root.masterColors.length; index++){
         var c = [];
@@ -857,22 +818,8 @@ Vue.component('body-main', {
           sorted.unshift(hslToHex(n[index][0], n[index][1], n[index][2]));
         }
       }
-      // console.log("Sorted: " + sorted);
       return sorted;
     }
-    // endDrag() {
-    //   Event.$emit('endDragEvt')
-    // },
-    // restrictHandle(evt) {
-    //   if ((evt.clientY > 96) && (evt.clientY < 340))
-    //     this.canDrag = true;
-    //   else
-    //     this.canDrag = false;
-    //   if (!this.canDrag) {
-    //     this.endDrag();
-    //     // console.log('Exiting');
-    //   }
-    // },
   }
 })
 
@@ -1079,24 +1026,7 @@ Vue.component('swatch-list', {
     showPrefix(swatch) {
       Event.$emit('swatchClearHoverEvt', swatch.key);
       swatch.isHover = true;
-      // if ((this.onlyCtrl) || (this.onlyShift) || (this.onlyAlt))
-        swatch.showPrefix = true;
-      // else
-      //   swatch.showPrefix = false;
-
-      // if (this.$root.isDefault) {
-      //   str += 'Def'
-      // } else if ((this.$root.mods.Ctrl) && (!this.$root.mods.Shift) && (!this.$root.mods.Alt)) {
-      //   str += 'cursor'
-      // } else if ((this.$root.mods.Shift) && (!this.$root.mods.Ctrl) && (!this.$root.mods.Alt)) {
-      //   str += 'plus'
-      // } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (!this.$root.mods.Ctrl)) {
-      //   str += 'cancel'
-      // } else if ((this.$root.mods.Alt) && (!this.$root.mods.Shift) && (this.$root.mods.Ctrl)) {
-      //   str += 'cancel'
-      // } else {
-      //   str += 'Multi'
-      // }
+      swatch.showPrefix = true;
     },
     hidePrefix(swatch) {
       swatch.isHover = false;
@@ -1104,7 +1034,6 @@ Vue.component('swatch-list', {
     }
   }
 })
-
 
 
 Vue.component('swatch-icon', {

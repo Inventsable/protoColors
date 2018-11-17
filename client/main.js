@@ -1247,13 +1247,13 @@ var app = new Vue({
       this.getAllAEColors();
     else
       Event.$emit('persistentLaunch', self.masterColors)
-    Event.$on('modsUpdate', self.parseModifiers);
     Event.$on('checkSelectedColors', self.getSelectedColors);
     Event.$on('scanAllAIColors', self.getAllAIColors);
     Event.$on('scanAllPSColors', self.getAllPSColors);
     Event.$on('updateSessionColors', self.updateSessionColors);
-    Event.$on('updateStorage', self.updateStorage);
     Event.$on('updateReverse', self.setReverse);
+    Event.$on('modsUpdate', self.parseModifiers);
+    Event.$on('updateStorage', self.updateStorage);
     csInterface.addEventListener(CSInterface.THEME_COLOR_CHANGED_EVENT, self.appThemeChanged);
     this.appThemeChanged();
     // console.log('last?')
@@ -1378,15 +1378,8 @@ var app = new Vue({
         this.reversed = JSON.parse(storage.getItem('reversed'))
         // this.reversed = false;
       }
-      if (this.activeApp == 'AEFT') {
-        // console.log(window)
-        // this.context.menu.pop();
-        // this.context.menu.push({id: "test", label: "Test", enabled: true, checkable: false, checked: false, ingroup: false})
-      }
-      //   this.masterColors = ['#ff0000', '#0000ff']
       this.checkSort();
       console.log(storage);
-      // console.log(this.persistent);
     },
     checkSort() {
       return this.sortBy = (this.context.menu[7].checked) ? 'Spectrum' : 'Time';

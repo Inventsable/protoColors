@@ -837,7 +837,7 @@ Vue.component('swatch-list', {
       return this.$root.isDefault 
     },
     isIllustrator: function() {
-      return (this.$root.activeApp == 'ILST') ? true : false;
+      return (this.$root.activeApp == 'ILST') ? false : false;
     },
   },
   template: `
@@ -855,12 +855,12 @@ Vue.component('swatch-list', {
             <div v-if="hasActive" class="swatchSuffix" :style="suffixStyle(swatch)"></div>
           </div>
           <div class="blank"></div>
-          <div :class="tagClass(swatch)">
-            <swatch-tag v-if="swatch.isActive" :model="swatch"></swatch-tag>
-          </div>
       </div>
     </div>
   `,
+    //   < div : class= "tagClass(swatch)" >
+      //    <swatch-tag v-if="swatch.isActive" : model="swatch"></swatch-tag>
+    //  </div > 
   methods: {
     wideStyle() {
       var style = 'swatchMain-' + this.$root.activeApp;

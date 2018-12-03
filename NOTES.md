@@ -6,6 +6,7 @@
 
 ## to-do
 
+* TextFrames do not get selected on ctrl+click
 * Swatches have no contrast mechanic if same as background of panel.
 * Trace Paper -- replaces colorHistory "Highlight". Generate layer above current artwork, replicate paths and fills/strokes, place solid white w/ artboard dimensions and lowered opacity beneath. Delete layer when not hovering.
 * ~~Use computed properties as modifiers for isolated Ctrl, Shift, Alt, Ctrl+Shift, Ctrl+Alt, etc.~~

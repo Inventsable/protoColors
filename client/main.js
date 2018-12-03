@@ -1667,13 +1667,10 @@ var app = new Vue({
       }
       console.log(`Clicked on ${target.label} with check: ${target.checked}`);
       if ((target.checkable) && (target.ingroup) && (!target.checked)) {
-        // console.log('this is currently ' + target.checked);
         target.checked = !target.checked;
         this.toggleMenuItemSiblings(parent.menu, target.id, target.checked);
-        // console.log('this is checkable and should toggle siblings');
       } else if ((target.checkable) && (!target.checked)) {
         target.checked = !target.checked;
-        // console.log(`Toggling to ${target.checked}`);
       } else {
         // console.log(`This is a non-checkable action: ${target.label}`);
       }

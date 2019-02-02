@@ -7,16 +7,24 @@
             "windows": {
                 "options": {
                     "shell": {
-                        "executable": "cmd.exe",
+                        "executable": "cmd.exe"
                     }
-                },
+                }
             },
-            "command": "'C:\\Program Files\\Adobe\\Adobe Illustrator CC 2019\\Support Files\\Contents\\Windows\\illustrator.exe' -r ${workspaceFolder}\\host\\ILST\\test.jsx",
+            "command": "'C:\\Program Files\\Adobe\\Adobe Illustrator CC 2019\\Support Files\\Contents\\Windows\\illustrator.exe' -r ${workspaceFolder}\\host\\ILST\\host.ts",
             "group": "test",
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
             }
         },
+        {
+            "type": "typescript",
+            "tsconfig": "host\\PHXS\\tsconfig.json",
+            "option": "watch",
+            "problemMatcher": [
+                "$tsc-watch"
+            ]
+        }
     ]
 }

@@ -6,6 +6,8 @@ Dynamic recent color history for Illustrator and Photoshop because I've never li
 
 ![](https://thumbs.gfycat.com/PertinentMediumFrillneckedlizard-size_restricted.gif)
 
+> :heavy_exclamation_mark: Support for After Effects has been dropped, use [Color Claw](https://github.com/Inventsable/Color-Claw) instead.
+
 * Auto-detects if active Fill/Stroke or Foreground/Background
 * (AI) Auto-collects all colors in current document on reset or non-persistent launch
 * (AI) Contextual Select Same Fill or Stroke while holding `cmd/ctrl`

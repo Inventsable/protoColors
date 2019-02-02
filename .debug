@@ -4,7 +4,7 @@
         <HostList>
             <Host Name="ILST" Port="2037"/>
             <Host Name="PHXS" Port="2038"/>
-            <Host Name="AEFT" Port="2039"/>
+            <!-- <Host Name="AEFT" Port="2039"/> -->
         </HostList>
     </Extension>
 </ExtensionList>
